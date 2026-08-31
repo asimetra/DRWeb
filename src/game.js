@@ -61,6 +61,10 @@ export const registerAccount = ({ name } = {}) =>
 export const readAccount = (accountId) =>
   call("GET", `/internal/v1/accounts/${Number(accountId)}`);
 
+/** The player as a page draws them: name, hero, title, trophies, standings. */
+export const readSummary = (accountId) =>
+  call("GET", `/internal/v1/accounts/${Number(accountId)}/summary`);
+
 export const reissueToken = (accountId) =>
   call("POST", `/internal/v1/accounts/${Number(accountId)}/token`);
 

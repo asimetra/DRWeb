@@ -414,6 +414,26 @@ export const authRoutes = async (app) => {
   }));
 
   /**
+   * The signed-in player's character, for the panel in the margin.
+   *
+   * Assembled by the game server rather than here: the title ladder, the level
+   * and the standings are all its rules, and working them out a second time on
+   * this side would be a second opinion to keep in step.
+   *
+   * A game server that is not answering is not an error. Somebody signed in on
+   * the website while the game restarts should see their account page, not a
+   * failure — so the panel goes quiet and everything else stands.
+   */
+  app.get("/api/me/character", { onRequest: requireAccount }, async (request) => {
+    try {
+      return await app.game.readSummary(request.user.accountId);
+    } catch (problem) {
+      if (problem instanceof GameServerError) return { reachable: false };
+      throw problem;
+    }
+  });
+
+  /**
    * A replacement client token, for somebody who has lost their configuration.
    * It does not invalidate the old one — that is what the DELETE is for.
    */

@@ -436,3 +436,49 @@ test("changing a password ends other sessions but not this one, and spares the g
   assert.equal((await elsewhere.get("/api/me")).statusCode, 401, "the other one does not");
   assert.deepEqual(fakeGame.revocations, [], "the game client is not touched");
 });
+
+/* ------------------------------------------------------------ character - */
+
+/**
+ * The character panel's data comes from the game server, whole.
+ *
+ * The title ladder, the level and the standings are all rules that server owns,
+ * so this side asks rather than working any of them out again.
+ */
+test("the character summary is passed through", async () => {
+  fakeGame.readSummary = async (accountId) => ({
+    account_id: accountId,
+    name: "Grimwald",
+    trophies: 9,
+    trophies_of: 12,
+    title: { name: "Slayer", tier: "rare" },
+    hero: { id: 101, name: "Berserker", icon: "avatar_berserker", level: 47 },
+    heroes: 6,
+    clears: 1204,
+  });
+
+  const { visitor } = await confirmed();
+  const response = await visitor.get("/api/me/character");
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.json().title.name, "Slayer");
+  assert.equal(response.json().hero.level, 47);
+  assert.equal(response.json().clears, 1204);
+});
+
+/**
+ * And a game server that is not answering leaves the panel quiet rather than
+ * failing the page: somebody signed in while the game restarts should still
+ * reach their account.
+ */
+test("a character panel survives the game server being down", async () => {
+  fakeGame.readSummary = async () => {
+    throw new GameServerError(502, "connect ECONNREFUSED");
+  };
+
+  const { visitor } = await confirmed();
+  const response = await visitor.get("/api/me/character");
+
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(response.json(), { reachable: false });
+});

@@ -164,6 +164,89 @@ const AccountBox = () => {
 /* --------------------------------------------------------------- widgets - */
 
 /**
+ * The character, which is what a player opens a server's site to look at.
+ *
+ * Everything shown here is the game server's own answer: the title comes from
+ * the trophy ladder, the level from the Leveling table and differs per hero,
+ * the clears from the boards. The portrait is the client's own avatar icon,
+ * served by the game server, and the frame is drawn either way so a missing
+ * picture leaves a gap rather than a hole.
+ */
+const CharacterBox = () => {
+  const { viewer, ready } = useViewer();
+  const [player, setPlayer] = useState(null);
+
+  useEffect(() => {
+    if (!ready || !viewer?.accountId) return undefined;
+    let live = true;
+    api.character().then(
+      (next) => live && setPlayer(next),
+      () => live && setPlayer({ reachable: false })
+    );
+    return () => {
+      live = false;
+    };
+  }, [ready, viewer?.accountId]);
+
+  if (!ready || !viewer?.accountId) return null;
+  if (!player) return <Box title="Character" />;
+  if (player.reachable === false) {
+    return (
+      <Box title="Character">
+        <p className="wait">The game server is not answering.</p>
+      </Box>
+    );
+  }
+
+  const hero = player.hero;
+  return (
+    <Box title={player.name || "Character"} flush>
+      {hero ? (
+        <div className="who">
+          <span
+            className="portrait"
+            title={hero.name}
+            style={
+              hero.icon
+                ? { backgroundImage: `url(${GAME_ICONS}${hero.icon}.png)` }
+                : undefined
+            }
+          >
+            {hero.name
+              .split(" ")
+              .map((word) => word[0])
+              .join("")}
+          </span>
+          <span>
+            <span className="who__hero">{hero.name}</span>
+            <span className="who__level">Level {hero.level}</span>
+          </span>
+        </div>
+      ) : null}
+      <Facts>
+        {player.title ? (
+          <Fact label="Title">
+            <span className={`title title--${player.title.tier}`}>{player.title.name}</span>
+          </Fact>
+        ) : null}
+        <Fact label="Trophies">
+          {player.trophies}
+          <span className="table__quiet"> / {player.trophies_of}</span>
+        </Fact>
+        <Fact label="Dungeons finished">{whole.format(player.clears ?? 0)}</Fact>
+        <Fact label="Heroes">{player.heroes}</Fact>
+      </Facts>
+    </Box>
+  );
+};
+
+/**
+ * The client's avatar icons, served by the game server rather than bundled
+ * here — the same route and the same reasoning as the background art.
+ */
+const GAME_ICONS = "/content/Resources/Art2D/Icons/Avatars/";
+
+/**
  * The margin numbers, which is what a server portal has always put there.
  *
  * A count rather than a roster — who exactly is online is a different question
@@ -314,6 +397,7 @@ export const Page = ({ where, children }) => (
 
     <div className="layout">
       <div className="column">
+        <CharacterBox />
         <AccountBox />
         <Menu />
         <ServerBox />

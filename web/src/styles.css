@@ -267,6 +267,18 @@ a:hover { color: var(--link-hot); }
 .table tbody tr:nth-child(2) .table__rank { color: var(--r-rare); }
 .table tbody tr:nth-child(3) .table__rank { color: var(--r-uncommon); }
 
+/* The character panel's portrait and name. */
+.who { display: flex; align-items: center; gap: 0.55rem; padding: 0.6rem 0.7rem; border-bottom: 1px solid var(--rule); }
+.who__hero { display: block; font-weight: 600; }
+.who__level { display: block; font-size: 0.78rem; color: var(--text-dim); }
+.portrait {
+  width: 36px; height: 36px; flex: none; image-rendering: pixelated;
+  background: var(--page-sunk) center / cover no-repeat;
+  border: 1px solid var(--frame-dark);
+  display: grid; place-items: center;
+  font-size: 0.7rem; color: var(--text-faint);
+}
+
 /*
  * A title wears the tier its trophy count earned, so the ladder reads the same
  * in a table cell as it does on a rank.

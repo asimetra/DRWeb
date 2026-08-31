@@ -69,6 +69,9 @@ export const api = {
   newGameToken: () => call("POST", "/api/game-token"),
 
   server: () => call("GET", "/api/server"),
+  /** The signed-in player's character, for the panel in the margin. */
+  character: () => attempt("GET", "/api/me/character"),
+
   /** Who is on and what has happened today, for the margins. */
   status: () => attempt("GET", "/api/status"),
 
