@@ -44,23 +44,18 @@ const relay = (reply, problem) => {
 };
 
 export const marketRoutes = async (app) => {
-  /** What this person could put up: unequipped weapons, and what they hold. */
-  app.get("/api/inventory", { onRequest: requireTrader }, async (request) => {
-    const account = await app.game.readAccount(request.user.account_id);
-    return {
-      accountId: account.id,
-      gold: Number(account.basic_currency ?? 0),
-      items: (account.account_items ?? [])
-        .filter((item) => !Number(item.avatar_id ?? 0))
-        .map((item) => ({
-          id: Number(item.id),
-          itemId: item.item_id,
-          power: item.power,
-          rarity: item.rarity,
-          level: item.requiredlevel,
-        })),
-    };
-  });
+  /**
+   * What this person could put up: asked for, rather than worked out here.
+   *
+   * This read the whole account and kept the weapons nobody was holding, which
+   * meant knowing that an `avatar_id` is what being equipped looks like — and
+   * it still left the sell list offering "item 11001", because turning an id
+   * into a name needs game data this side does not have and is not meant to.
+   * Both are the game server's answers, so it gives them.
+   */
+  app.get("/api/inventory", { onRequest: requireTrader }, async (request) =>
+    app.game.readInventory(request.user.account_id)
+  );
 
   /**
    * Everything up for sale. Readable signed out: a market nobody can look at

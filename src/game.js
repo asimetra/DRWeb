@@ -76,6 +76,10 @@ export const readAccount = (accountId) =>
 export const readSummary = (accountId) =>
   call("GET", `/internal/v1/accounts/${Number(accountId)}/summary`);
 
+/** What an account could put up for sale, named and already filtered. */
+export const readInventory = (accountId) =>
+  call("GET", `/internal/v1/accounts/${Number(accountId)}/inventory`);
+
 export const reissueToken = (accountId) =>
   call("POST", `/internal/v1/accounts/${Number(accountId)}/token`);
 

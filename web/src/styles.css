@@ -437,6 +437,28 @@ a:hover { color: var(--link-hot); }
 .title--uncommon { color: var(--r-uncommon); }
 .title--common { color: var(--r-common); }
 
+/*
+ * A weapon and what it does, stacked: the name on its line, the modifiers
+ * under it one to a line — they are read down rather than across, and a
+ * legendary carries three.
+ *
+ * Quieter than the name on purpose. The name and its rarity are what somebody
+ * scans a market for; the modifiers are what they stop on. Colouring both
+ * would leave the table with nothing to rest on.
+ */
+.weapon { display: block; }
+.weapon__mods { display: block; margin-top: 0.15rem; }
+.weapon__mod {
+  display: block;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: var(--text-dim);
+}
+.weapon__mod::before { content: "· "; opacity: 0.55; }
+/* Set apart, as the game sets it apart — see describeListings. */
+.weapon__mod--legendary { color: var(--r-legendary); }
+.weapon__mod--legendary::before { content: "★ "; opacity: 0.8; }
+
 /** Two-column facts. The same stripes, so a table and a fact list agree. */
 .facts { border-collapse: collapse; width: 100%; font-size: 0.83rem; }
 .facts th,

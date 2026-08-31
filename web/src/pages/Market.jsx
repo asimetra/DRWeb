@@ -12,18 +12,46 @@ const whole = new Intl.NumberFormat("en-GB");
 const TIERS = ["common", "uncommon", "rare", "legendary"];
 const tierOf = (rarity) => TIERS[Math.max(0, Math.min(3, Number(rarity ?? 0)))] ?? "common";
 
-/** What a weapon is, in one line. The name is the game server's answer. */
-const Weapon = ({ listing }) => (
-  <span>
-    <span className={`title title--${tierOf(listing.rarity)}`}>
-      {listing.name ?? `item ${listing.item_id}`}
+/**
+ * What a weapon is: the line that names it, and under it the lines somebody
+ * actually buys it for.
+ *
+ * Every word is the game server's answer. A modifier is stored as a number and
+ * this side holds no game data to turn 70211 into "Chargey", so a listing
+ * arrives already carrying the name and what it does — see `describeListings`.
+ * An item with none has nothing underneath, which is most of them.
+ */
+const Weapon = ({ listing }) => {
+  const modifiers = listing.modifiers ?? [];
+  return (
+    <span className="weapon">
+      <span className={`title title--${tierOf(listing.rarity)}`}>
+        {listing.name ?? `item ${listing.item_id}`}
+      </span>
+      {listing.power ? <span className="table__quiet"> · power {listing.power}</span> : null}
+      {listing.requiredlevel ? (
+        <span className="table__quiet"> · level {listing.requiredlevel}</span>
+      ) : null}
+
+      {modifiers.length || listing.legendary ? (
+        <span className="weapon__mods">
+          {modifiers.map((modifier) => (
+            <span className="weapon__mod" key={modifier.id}>
+              {modifier.description ?? modifier.name}
+            </span>
+          ))}
+          {/* Set apart the way the game sets it apart: the third one, which
+              only the top rarity carries. */}
+          {listing.legendary ? (
+            <span className="weapon__mod weapon__mod--legendary">
+              {listing.legendary.description ?? listing.legendary.name}
+            </span>
+          ) : null}
+        </span>
+      ) : null}
     </span>
-    {listing.power ? <span className="table__quiet"> · power {listing.power}</span> : null}
-    {listing.requiredlevel ? (
-      <span className="table__quiet"> · level {listing.requiredlevel}</span>
-    ) : null}
-  </span>
-);
+  );
+};
 
 const Gold = ({ children }) => (
   <span className="gold">{whole.format(Number(children ?? 0))}</span>
@@ -267,7 +295,13 @@ const Stall = ({ stall, bag, busy, onList, onCancel, onClaim }) => {
                 <option value="">choose one</option>
                 {offerable.map((item) => (
                   <option key={item.id} value={item.id}>
-                    {`item ${item.itemId} · power ${item.power ?? 0} · level ${item.level ?? 1}`}
+                    {[
+                      item.name ?? `item ${item.item_id}`,
+                      `power ${item.power ?? 0}`,
+                      `level ${item.requiredlevel ?? 1}`,
+                      ...(item.modifiers ?? []).map((modifier) => modifier.name),
+                      ...(item.legendary ? [`★ ${item.legendary.name}`] : []),
+                    ].join(" · ")}
                   </option>
                 ))}
               </select>

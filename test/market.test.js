@@ -55,6 +55,21 @@ const fakeGame = {
   async readAccount(accountId) {
     return fakeGame.accounts.get(Number(accountId));
   },
+  /*
+   * Which weapons are on offer, and what they are called, are the game
+   * server's answers now — this stands in for them rather than working them
+   * out again, which is the point of the endpoint existing.
+   */
+  async readInventory(accountId) {
+    const account = fakeGame.accounts.get(Number(accountId));
+    return {
+      accountId: account.id,
+      gold: Number(account.basic_currency ?? 0),
+      items: (account.account_items ?? [])
+        .filter((item) => !Number(item.avatar_id ?? 0))
+        .map((item) => ({ ...item, name: `Weapon ${item.item_id}`, modifiers: [] })),
+    };
+  },
   async reissueToken(accountId) {
     return { accountId, token: "x" };
   },
