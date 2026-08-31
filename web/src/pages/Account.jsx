@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api, ApiError } from "../api.js";
-import { Box, Button, Buttons, Field, Footnote, Notice, Row, Rows, TopBar } from "../components/Chrome.jsx";
+import { Box, Button, Buttons, Field, Footnote, Notice, Quiet, Row, Rows, TopBar } from "../components/Chrome.jsx";
 import { GameToken } from "../components/GameToken.jsx";
 
 const ChangePassword = ({ onDone, onCancel }) => {
@@ -108,6 +108,8 @@ export const Account = () => {
           <Row label="Email confirmed">{user.verified ? "yes" : "no"}</Row>
         </Rows>
         <Footnote>
+          <Quiet to="/trade">Trade with another player</Quiet>
+          {" · "}
           <button
             className="link"
             type="button"

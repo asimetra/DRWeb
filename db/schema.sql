@@ -75,3 +75,47 @@ CREATE TABLE IF NOT EXISTS web.tokens (
 
 CREATE INDEX IF NOT EXISTS tokens_user ON web.tokens(user_id, purpose);
 CREATE INDEX IF NOT EXISTS tokens_expires ON web.tokens(expires);
+
+/*
+ * Trades, which are a conversation before they are a movement of goods.
+ *
+ * Every part of the negotiation lives here — who proposed it, what each side
+ * is offering, who has agreed — because none of it is game state. The moment
+ * both sides have agreed, the game server is asked to move the goods on one
+ * transaction, and this table remembers only that it happened.
+ *
+ * `state` is checked rather than inferred. A settled trade must not be
+ * reopened by a late click, and a cancelled one must not settle.
+ */
+CREATE TABLE IF NOT EXISTS web.trades (
+    id          BIGSERIAL   PRIMARY KEY,
+    proposer_id BIGINT      NOT NULL REFERENCES web.users(id) ON DELETE CASCADE,
+    partner_id  BIGINT      NOT NULL REFERENCES web.users(id) ON DELETE CASCADE,
+    state       TEXT        NOT NULL DEFAULT 'open'
+                            CHECK (state IN ('open', 'settled', 'cancelled')),
+    created     TIMESTAMPTZ NOT NULL DEFAULT now(),
+    closed      TIMESTAMPTZ,
+    CHECK (proposer_id <> partner_id)
+);
+
+CREATE INDEX IF NOT EXISTS trades_proposer ON web.trades(proposer_id) WHERE state = 'open';
+CREATE INDEX IF NOT EXISTS trades_partner ON web.trades(partner_id) WHERE state = 'open';
+
+/*
+ * One row per side. `accepted` is cleared on both rows whenever either offer
+ * changes — the oldest rule a trade window has, and the one that stops the
+ * swap made in the moment between the other person agreeing and the goods
+ * moving.
+ *
+ * `items` holds game item ids and nothing else. Their power, rarity and name
+ * are read from the game server when the screen is drawn, because this table
+ * must not be a second opinion about what a weapon is.
+ */
+CREATE TABLE IF NOT EXISTS web.trade_offers (
+    trade_id BIGINT  NOT NULL REFERENCES web.trades(id) ON DELETE CASCADE,
+    user_id  BIGINT  NOT NULL REFERENCES web.users(id) ON DELETE CASCADE,
+    items    JSONB   NOT NULL DEFAULT '[]',
+    gold     BIGINT  NOT NULL DEFAULT 0 CHECK (gold >= 0),
+    accepted BOOLEAN NOT NULL DEFAULT false,
+    PRIMARY KEY (trade_id, user_id)
+);

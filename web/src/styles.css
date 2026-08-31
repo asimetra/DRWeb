@@ -319,3 +319,107 @@ body {
   padding: 8px 0;
   color: var(--text-dim);
 }
+
+/* ---------------------------------------------------------------- trade - */
+
+.sides {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--rule);
+  border: 1px solid var(--rule);
+}
+
+@media (max-width: 520px) {
+  .sides {
+    grid-template-columns: 1fr;
+  }
+}
+
+.side {
+  background: var(--page);
+  padding: 8px 10px 10px;
+}
+
+.side__who {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--rule);
+  font-size: 11px;
+  font-weight: bold;
+  color: var(--text-dim);
+}
+
+.side__state {
+  font-weight: normal;
+}
+
+.side__state--yes {
+  color: var(--good-text);
+  font-weight: bold;
+}
+
+.side__gold {
+  margin: 6px 0 0;
+  padding-top: 5px;
+  border-top: 1px dotted var(--rule);
+  font-variant-numeric: tabular-nums;
+}
+
+/* One line per weapon, dense on purpose: a bag is a list, not a gallery. */
+.wares {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ware {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 2px 3px;
+  font-variant-numeric: tabular-nums;
+}
+
+.ware:nth-child(odd) {
+  background: rgba(138, 117, 80, 0.12);
+}
+
+.ware__id {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.ware__fact {
+  margin-left: auto;
+  font-size: 11.5px;
+  color: var(--text-dim);
+}
+
+.ware--none {
+  padding: 4px 3px;
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+.gold-field {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 10px 0 0;
+}
+
+.gold-field .field__input {
+  width: 110px;
+}
+
+.gold-field span {
+  font-size: 11px;
+  font-weight: bold;
+  color: var(--text-dim);
+}

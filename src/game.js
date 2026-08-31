@@ -66,3 +66,11 @@ export const reissueToken = (accountId) =>
 
 export const revokeTokens = (accountId) =>
   call("DELETE", `/internal/v1/accounts/${Number(accountId)}/token`);
+
+/**
+ * Both sides have agreed; move the goods. One call because the game server
+ * does it as one transaction — the pair locked in id order, both accounts
+ * written together — and splitting it would be inventing a way for a weapon
+ * to end up on neither account.
+ */
+export const settleTrade = (parties) => call("POST", "/internal/v1/trades", { parties });

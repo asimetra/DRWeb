@@ -57,6 +57,15 @@ export const findUserById = async (id) => {
   return rows[0] ?? null;
 };
 
+export const findUserByAccountId = async (accountId) => {
+  const { rows } = await connect().query(
+    `SELECT id, email, password_hash, account_id, verified_at, created, last_login
+       FROM web.users WHERE account_id = $1`,
+    [Number(accountId)]
+  );
+  return rows[0] ?? null;
+};
+
 export const linkAccount = async (userId, accountId) => {
   await connect().query("UPDATE web.users SET account_id = $2 WHERE id = $1", [
     Number(userId),
@@ -149,6 +158,120 @@ export const setPassword = async (id, passwordHash) => {
     Number(id),
     passwordHash,
   ]);
+};
+
+/* ------------------------------------------------------------------ trades - */
+
+/**
+ * A trade and both its offers, assembled the way the rest of the application
+ * expects it: one object with the sides keyed by user id.
+ */
+const withOffers = async (row) => {
+  if (!row) return null;
+  const { rows } = await connect().query(
+    "SELECT user_id, items, gold, accepted FROM web.trade_offers WHERE trade_id = $1",
+    [row.id]
+  );
+  return {
+    ...row,
+    offers: Object.fromEntries(
+      rows.map((offer) => [
+        Number(offer.user_id),
+        { items: offer.items ?? [], gold: Number(offer.gold), accepted: offer.accepted },
+      ])
+    ),
+  };
+};
+
+export const createTrade = async ({ proposerId, partnerId }) => {
+  const client = await connect().connect();
+  try {
+    await client.query("BEGIN");
+    const { rows } = await client.query(
+      "INSERT INTO web.trades (proposer_id, partner_id) VALUES ($1, $2) RETURNING *",
+      [Number(proposerId), Number(partnerId)]
+    );
+    for (const userId of [proposerId, partnerId]) {
+      await client.query(
+        "INSERT INTO web.trade_offers (trade_id, user_id) VALUES ($1, $2)",
+        [rows[0].id, Number(userId)]
+      );
+    }
+    await client.query("COMMIT");
+    return withOffers(rows[0]);
+  } catch (problem) {
+    await client.query("ROLLBACK");
+    throw problem;
+  } finally {
+    client.release();
+  }
+};
+
+export const findTrade = async (id) => {
+  const { rows } = await connect().query("SELECT * FROM web.trades WHERE id = $1", [Number(id)]);
+  return withOffers(rows[0] ?? null);
+};
+
+export const findOpenTradeBetween = async (first, second) => {
+  const { rows } = await connect().query(
+    `SELECT * FROM web.trades
+      WHERE state = 'open'
+        AND ((proposer_id = $1 AND partner_id = $2) OR (proposer_id = $2 AND partner_id = $1))
+      LIMIT 1`,
+    [Number(first), Number(second)]
+  );
+  return withOffers(rows[0] ?? null);
+};
+
+export const openTradesFor = async (userId) => {
+  const { rows } = await connect().query(
+    "SELECT * FROM web.trades WHERE state = 'open' AND (proposer_id = $1 OR partner_id = $1)",
+    [Number(userId)]
+  );
+  return Promise.all(rows.map(withOffers));
+};
+
+/**
+ * Setting an offer clears both agreements, in the same statement pair, so that
+ * there is no instant in which one side's acceptance stands against an offer
+ * it never saw.
+ */
+export const setTradeOffer = async (tradeId, userId, { items, gold }) => {
+  const client = await connect().connect();
+  try {
+    await client.query("BEGIN");
+    await client.query(
+      `UPDATE web.trade_offers SET items = $3, gold = $4, accepted = false
+        WHERE trade_id = $1 AND user_id = $2`,
+      [Number(tradeId), Number(userId), JSON.stringify(items), Number(gold)]
+    );
+    await client.query("UPDATE web.trade_offers SET accepted = false WHERE trade_id = $1", [
+      Number(tradeId),
+    ]);
+    await client.query("COMMIT");
+  } catch (problem) {
+    await client.query("ROLLBACK");
+    throw problem;
+  } finally {
+    client.release();
+  }
+  return findTrade(tradeId);
+};
+
+export const setTradeAccepted = async (tradeId, userId, accepted) => {
+  await connect().query(
+    "UPDATE web.trade_offers SET accepted = $3 WHERE trade_id = $1 AND user_id = $2",
+    [Number(tradeId), Number(userId), Boolean(accepted)]
+  );
+  return findTrade(tradeId);
+};
+
+export const closeTrade = async (tradeId, state) => {
+  await connect().query("UPDATE web.trades SET state = $2, closed = now() WHERE id = $1", [
+    Number(tradeId),
+    state,
+  ]);
+  return findTrade(tradeId);
 };
 
 export const ping = async () => {

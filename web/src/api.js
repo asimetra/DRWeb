@@ -67,5 +67,12 @@ export const api = {
   resetPassword: (body) => call("POST", "/api/password/reset", body),
   changePassword: (body) => call("POST", "/api/password", body),
   newGameToken: () => call("POST", "/api/game-token"),
+
+  inventory: () => call("GET", "/api/inventory"),
+  trade: (id) => call("GET", `/api/trades/${id}`),
+  startTrade: (partnerAccountId) => call("POST", "/api/trades", { partnerAccountId }),
+  setTradeOffer: (id, offer) => call("PUT", `/api/trades/${id}/offer`, offer),
+  acceptTrade: (id) => call("POST", `/api/trades/${id}/accept`),
+  cancelTrade: (id) => call("POST", `/api/trades/${id}/cancel`),
   revokeGameTokens: () => call("DELETE", "/api/game-token"),
 };

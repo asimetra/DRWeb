@@ -8,11 +8,13 @@ import csrf from "@fastify/csrf-protection";
 import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
 import fastifyStatic from "@fastify/static";
+import websocket from "@fastify/websocket";
 import { config } from "./config.js";
 import * as storage from "./storage/index.js";
 import * as gameServer from "./game.js";
 import { createMailer } from "./mail.js";
 import { authRoutes } from "./routes/auth.js";
+import { tradeRoutes } from "./routes/trade.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.resolve(here, "..", "public");
@@ -109,7 +111,11 @@ export const buildApp = async ({
   });
   await app.register(csrf, { sessionPlugin: "@fastify/session" });
 
+  // Before the routes that declare `websocket: true`.
+  await app.register(websocket);
+
   await app.register(authRoutes);
+  await app.register(tradeRoutes);
 
   /**
    * The built front end, when there is one. Registered conditionally so that a
