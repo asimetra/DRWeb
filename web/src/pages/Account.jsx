@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api, ApiError } from "../api.js";
-import { Box, Button, Buttons, Field, Footnote, Notice, Quiet, Row, Rows, TopBar } from "../components/Chrome.jsx";
+import { Box, Button, Buttons, Field, Footnote, Notice, Quiet, Fact, Facts, Page } from "../components/Chrome.jsx";
 import { GameToken } from "../components/GameToken.jsx";
 
 const ChangePassword = ({ onDone, onCancel }) => {
@@ -65,8 +65,10 @@ export const Account = () => {
   const [said, setSaid] = useState("");
   const [problem, setProblem] = useState("");
   const [changing, setChanging] = useState(false);
+  const [server, setServer] = useState(null);
 
   useEffect(() => {
+    api.server().then(setServer, () => undefined);
     api.me().then(
       (result) => setUser(result.user),
       () => navigate("/login")
@@ -75,12 +77,11 @@ export const Account = () => {
 
   if (!user) {
     return (
-      <>
-        <TopBar where="Account Management" />
+      <Page where="Account Management">
         <Box title="Account Management">
           <p className="wait">Loading…</p>
         </Box>
-      </>
+      </Page>
     );
   }
 
@@ -96,17 +97,16 @@ export const Account = () => {
   };
 
   return (
-    <>
-      <TopBar where="Account Management" />
+    <Page where="Account Management">
 
       <Box title="Account Information">
         <Notice kind="bad">{problem}</Notice>
         <Notice kind="good">{said}</Notice>
-        <Rows>
-          <Row label="Email">{user.email}</Row>
-          <Row label="Game account">{user.accountId ?? "none"}</Row>
-          <Row label="Email confirmed">{user.verified ? "yes" : "no"}</Row>
-        </Rows>
+        <Facts>
+          <Fact label="Email">{user.email}</Fact>
+          <Fact label="Game account">{user.accountId ?? "none"}</Fact>
+          <Fact label="Email confirmed">{user.verified ? "yes" : "no"}</Fact>
+        </Facts>
         <Footnote>
           <Quiet to="/trade">Trade with another player</Quiet>
         </Footnote>
@@ -114,8 +114,14 @@ export const Account = () => {
 
       <Box
         title="Game Client"
-        lede="The account id and validation token your client reads from its configuration file."
+        lede="What your client reads from its own configuration file."
       >
+        {server ? (
+          <>
+            <span className="field__label">Server address</span>
+            <code className="token">{server.gameAddress}</code>
+          </>
+        ) : null}
         {user.accountId ? (
           <>
             {game ? <GameToken game={game} /> : null}
@@ -166,6 +172,6 @@ export const Account = () => {
           </Buttons>
         )}
       </Box>
-    </>
+    </Page>
   );
 };

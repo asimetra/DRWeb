@@ -1,30 +1,38 @@
 /*
- * Account pages, in the manner of an older game's website: a dark ground, a
- * column of cream boxes with brown rules, and small plain type set at the size
- * things were set at before everything got big.
+ * Two columns, framed boxes, striped tables.
  *
- * The restraint is the point. There is no display face, no glow, no vignette
- * and no ornament — a heading is a brown bar with a word in it, and a form is
- * a form. What character the page has comes from the palette and the density,
- * not from decoration laid over the top.
+ * The shape older game sites settled on, and settled on for a reason: the left
+ * column holds the things you always want reachable — who you are signed in
+ * as, and where you can go — so the main column is never spent on navigation
+ * and a signed-out visitor always has the way in on screen.
+ *
+ * The chrome is a band. Every box is a coloured frame with a lighter panel set
+ * into it and a title bar across the top, and that one repeated device is what
+ * makes a page of unlike things read as one site. Tables are the panel rather
+ * than something laid inside it: flush to the frame, header bar in the frame's
+ * own colour, rows striped.
  */
 
 :root {
-  --outside: #17150f;
-  --outside-edge: #0c0b08;
+  --outside: #1a1712;
+  --outside-dark: #0d0b08;
+
+  /* The band every box is made of, and the bar across its head. */
+  --frame: #5d4a2c;
+  --frame-dark: #3a2d19;
+  --frame-lit: #7a6339;
 
   --page: #f2e6cd;
-  --page-alt: #e4d3b3;
-  --page-sunk: #d8c49f;
+  --page-alt: #e2cfab;
+  --page-lit: #f9f2e2;
+  --page-sunk: #d6c19b;
 
-  --rule: #8a7550;
-  --rule-dark: #5c4a2e;
-  --bar: #4c3d26;
-  --bar-lit: #63502f;
+  --rule: #b09a70;
+  --rule-dark: #8a7550;
 
   --text: #2a2317;
   --text-dim: #6a5a41;
-  --text-on-bar: #f2e6cd;
+  --text-on-frame: #f6ecd6;
 
   --link: #8a3d12;
   --link-hot: #b35418;
@@ -54,95 +62,99 @@ body {
   margin: 0;
   background-color: var(--outside);
   background-image:
-    linear-gradient(180deg, rgba(0, 0, 0, 0.55), transparent 240px),
-    repeating-linear-gradient(
-      135deg,
-      rgba(255, 255, 255, 0.012) 0 2px,
-      transparent 2px 5px
-    );
+    linear-gradient(180deg, rgba(0, 0, 0, 0.5), transparent 200px),
+    repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.011) 0 2px, transparent 2px 5px);
   color: var(--text);
   font-family: var(--ui);
-  font-size: 13px;
-  line-height: 1.55;
+  font-size: 12px;
+  line-height: 1.5;
 }
 
-/* ------------------------------------------------------------------ page - */
+/* --------------------------------------------------------------- layout - */
 
-.shell {
-  max-width: 620px;
+.masthead {
+  border-bottom: 2px solid var(--outside-dark);
+  background: linear-gradient(180deg, var(--frame-lit), var(--frame));
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.45);
+}
+
+.masthead__inner {
+  max-width: 940px;
   margin: 0 auto;
-  padding: 0 14px 48px;
-}
-
-.topbar {
+  padding: 10px 14px;
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 14px;
-  padding: 9px 12px;
-  margin: 0 -14px 20px;
-  background: linear-gradient(180deg, var(--bar-lit), var(--bar));
-  border-bottom: 2px solid var(--outside-edge);
-  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.4);
 }
 
-.topbar__name {
+.masthead__name {
   margin: 0;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: bold;
-  letter-spacing: 0.06em;
-  color: var(--text-on-bar);
+  letter-spacing: 0.08em;
+  color: var(--text-on-frame);
   text-decoration: none;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.45);
 }
 
-.topbar__where {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
+.masthead__where {
   font-size: 11px;
-  color: #b9a884;
+  color: #cbb68d;
 }
 
-.topbar__page {
-  color: #9a8a68;
+.layout {
+  display: grid;
+  grid-template-columns: 196px minmax(0, 1fr);
+  gap: 14px;
+  max-width: 940px;
+  margin: 0 auto;
+  padding: 14px 14px 48px;
+  align-items: start;
 }
 
-.topbar__link {
-  font-family: var(--ui);
-  font-size: 11px;
-  color: #e0cfa8;
-  text-decoration: underline;
-  cursor: pointer;
-  background: none;
-  border: none;
-  padding: 0;
+@media (max-width: 700px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
-.topbar__link:hover {
-  color: #fff;
+.column > * + * {
+  margin-top: 12px;
 }
 
 /* ------------------------------------------------------------------ box - */
 
+/*
+ * A band of frame with a panel set into it. The title sits on the band, so the
+ * frame reads as one piece rather than as a border drawn round a card.
+ */
 .box {
-  background: var(--page);
-  border: 1px solid var(--rule-dark);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.15) inset, 0 3px 8px rgba(0, 0, 0, 0.45);
-  margin-bottom: 16px;
+  background: var(--frame);
+  border: 1px solid var(--frame-dark);
+  padding: 0 3px 3px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
 }
 
 .box__title {
   margin: 0;
-  padding: 5px 10px;
-  font-size: 12px;
+  padding: 5px 7px 6px;
+  font-size: 11.5px;
   font-weight: bold;
-  color: var(--text-on-bar);
-  background: linear-gradient(180deg, var(--bar-lit), var(--bar));
-  border-bottom: 1px solid var(--rule-dark);
+  letter-spacing: 0.03em;
+  color: var(--text-on-frame);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
 }
 
 .box__body {
-  padding: 12px 14px 14px;
+  padding: 9px 10px 10px;
+  background: var(--page);
+  border: 1px solid var(--frame-dark);
+}
+
+/** Tables and lists are the panel, not something laid inside it. */
+.box__body--flush {
+  padding: 0;
 }
 
 .box__body > p:first-child {
@@ -154,127 +166,234 @@ body {
 }
 
 .lede {
-  margin: 0 0 12px;
+  margin: 0 0 9px;
   color: var(--text-dim);
 }
 
-/* ----------------------------------------------------------------- rows - */
+/* ---------------------------------------------------------------- table - */
 
-.rows {
-  border-top: 1px solid var(--rule);
-}
-
-.row {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 5px 10px;
-  border-bottom: 1px solid var(--rule);
-  background: var(--page-alt);
-}
-
-.row:nth-child(even) {
-  background: var(--page);
-}
-
-.row__key {
-  color: var(--text-dim);
-}
-
-.row__value {
-  text-align: right;
+.table {
+  width: 100%;
+  border-collapse: collapse;
   font-variant-numeric: tabular-nums;
 }
 
-/* ----------------------------------------------------------------- form - */
+.table th {
+  padding: 4px 8px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: bold;
+  color: var(--text-on-frame);
+  background: linear-gradient(180deg, var(--frame-lit), var(--frame));
+  border-bottom: 1px solid var(--frame-dark);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--page-sunk);
+}
+
+.table tbody tr:nth-child(odd) td {
+  background: var(--page-alt);
+}
+
+.table tbody tr:hover td {
+  background: var(--page-lit);
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.table__num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.table__rank {
+  width: 2.6em;
+  text-align: right;
+  color: var(--text-dim);
+}
+
+.table__quiet {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--text-dim);
+}
+
+.table__empty {
+  padding: 9px 10px;
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+/** Two-column facts. The same stripes, so a table and a fact list agree. */
+.facts {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.facts th {
+  width: 42%;
+  padding: 4px 8px;
+  text-align: left;
+  font-weight: normal;
+  color: var(--text-dim);
+  background: var(--page-alt);
+  border-bottom: 1px solid var(--page-sunk);
+}
+
+.facts td {
+  padding: 4px 8px;
+  text-align: right;
+  border-bottom: 1px solid var(--page-sunk);
+  font-variant-numeric: tabular-nums;
+}
+
+.facts tr:last-child th,
+.facts tr:last-child td {
+  border-bottom: none;
+}
+
+/* ---------------------------------------------------------------- menu - */
+
+.menu {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.menu li + li {
+  border-top: 1px solid var(--page-sunk);
+}
+
+.menu a {
+  display: block;
+  padding: 4px 8px 4px 18px;
+  position: relative;
+  color: var(--text);
+  text-decoration: none;
+}
+
+/* A small pointer rather than a bullet: it is a direction, not an item. */
+.menu a::before {
+  content: "";
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  margin-top: -3px;
+  border: 3px solid transparent;
+  border-left-color: var(--frame);
+}
+
+.menu a:hover {
+  background: var(--page-lit);
+  color: var(--link);
+}
+
+.menu a:hover::before {
+  border-left-color: var(--link);
+}
+
+.menu a[aria-current="page"] {
+  background: var(--page-alt);
+  font-weight: bold;
+}
+
+/* ---------------------------------------------------------------- forms - */
 
 .field {
   display: block;
-  margin-bottom: 11px;
+  margin-bottom: 9px;
 }
 
 .field__label {
   display: block;
-  margin-bottom: 3px;
-  font-size: 11px;
+  margin-bottom: 2px;
+  font-size: 10.5px;
   font-weight: bold;
   color: var(--text-dim);
 }
 
 .field__input {
   width: 100%;
-  padding: 5px 7px;
+  padding: 4px 6px;
   font-family: var(--ui);
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text);
-  background: #fbf4e6;
-  border: 1px solid var(--rule);
+  background: var(--page-lit);
+  border: 1px solid var(--rule-dark);
   border-radius: 0;
-  box-shadow: inset 1px 1px 2px rgba(92, 74, 46, 0.28);
+  box-shadow: inset 1px 1px 2px rgba(58, 45, 25, 0.3);
   outline: none;
 }
 
 .field__input:focus {
-  border-color: var(--rule-dark);
   background: #fff;
+  border-color: var(--frame);
+  box-shadow: inset 1px 1px 2px rgba(58, 45, 25, 0.3), 0 0 0 1px rgba(93, 74, 44, 0.35);
 }
 
 .field__hint {
   display: block;
-  margin-top: 3px;
-  font-size: 11px;
+  margin-top: 2px;
+  font-size: 10.5px;
   color: var(--text-dim);
 }
-
-/* --------------------------------------------------------------- button - */
 
 .button {
   display: inline-block;
-  padding: 4px 14px;
+  padding: 3px 12px;
   font-family: var(--ui);
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: bold;
-  color: var(--text);
+  color: var(--text-on-frame);
   cursor: pointer;
-  background: linear-gradient(180deg, #eadcbf, var(--page-sunk));
-  border: 1px solid var(--rule-dark);
+  background: linear-gradient(180deg, var(--frame-lit), var(--frame));
+  border: 1px solid var(--frame-dark);
   border-radius: 0;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.55),
-    inset 0 -1px 0 rgba(92, 74, 46, 0.2);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 
 .button:hover:not(:disabled) {
-  background: linear-gradient(180deg, #f5ead2, #e0cca6);
+  background: linear-gradient(180deg, #8c7343, var(--frame-lit));
 }
 
 .button:active:not(:disabled) {
-  box-shadow: inset 1px 1px 3px rgba(92, 74, 46, 0.4);
+  box-shadow: inset 1px 1px 3px rgba(0, 0, 0, 0.45);
 }
 
 .button:disabled {
-  color: var(--text-dim);
   cursor: not-allowed;
-  background: var(--page-alt);
+  opacity: 0.55;
 }
 
 .button--danger {
-  color: var(--bad-text);
+  background: linear-gradient(180deg, #8d4234, #6d2f24);
+  border-color: #4a1d18;
+}
+
+.button--danger:hover:not(:disabled) {
+  background: linear-gradient(180deg, #a34e3e, #7d3729);
 }
 
 .buttons {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 12px;
+  gap: 6px;
+  margin-top: 10px;
 }
 
-/* --------------------------------------------------------------- notice - */
+/* -------------------------------------------------------------- notices - */
 
 .notice {
-  padding: 6px 9px;
-  margin-bottom: 12px;
-  border: 1px solid var(--rule);
+  padding: 5px 8px;
+  margin-bottom: 9px;
+  border: 1px solid var(--rule-dark);
   background: var(--page-alt);
 }
 
@@ -290,26 +409,24 @@ body {
   color: var(--good-text);
 }
 
-/* ---------------------------------------------------------------- token - */
+/* ----------------------------------------------------------------- misc - */
 
 .token {
   display: block;
-  padding: 6px 8px;
+  padding: 5px 7px;
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: 11.5px;
   line-height: 1.45;
   word-break: break-all;
   color: var(--text);
-  background: #fbf4e6;
-  border: 1px solid var(--rule);
-  box-shadow: inset 1px 1px 2px rgba(92, 74, 46, 0.28);
+  background: var(--page-lit);
+  border: 1px solid var(--rule-dark);
+  box-shadow: inset 1px 1px 2px rgba(58, 45, 25, 0.3);
 }
 
 .token + .field__label {
-  margin-top: 9px;
+  margin-top: 7px;
 }
-
-/* ----------------------------------------------------------------- misc - */
 
 .link {
   color: var(--link);
@@ -326,20 +443,15 @@ body {
 }
 
 .footnote {
-  margin: 12px 0 0;
-  padding-top: 9px;
-  border-top: 1px solid var(--rule);
-  font-size: 11.5px;
+  margin: 9px 0 0;
+  padding-top: 7px;
+  border-top: 1px solid var(--page-sunk);
+  font-size: 11px;
   color: var(--text-dim);
 }
 
-.footnote a,
-.footnote .link {
-  font-size: 11.5px;
-}
-
 .wait {
-  padding: 8px 0;
+  padding: 6px 0;
   color: var(--text-dim);
 }
 
@@ -349,8 +461,7 @@ body {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1px;
-  background: var(--rule);
-  border: 1px solid var(--rule);
+  background: var(--frame-dark);
 }
 
 @media (max-width: 520px) {
@@ -361,7 +472,7 @@ body {
 
 .side {
   background: var(--page);
-  padding: 8px 10px 10px;
+  padding: 0 0 7px;
 }
 
 .side__who {
@@ -369,63 +480,67 @@ body {
   justify-content: space-between;
   align-items: baseline;
   gap: 8px;
-  margin-bottom: 6px;
-  padding-bottom: 4px;
-  border-bottom: 1px solid var(--rule);
-  font-size: 11px;
+  margin: 0 0 4px;
+  padding: 3px 8px;
+  background: var(--page-alt);
+  border-bottom: 1px solid var(--page-sunk);
+  font-size: 10.5px;
   font-weight: bold;
   color: var(--text-dim);
 }
 
-.side__state {
-  font-weight: normal;
-}
-
 .side__state--yes {
   color: var(--good-text);
-  font-weight: bold;
 }
 
 .side__gold {
-  margin: 6px 0 0;
-  padding-top: 5px;
-  border-top: 1px dotted var(--rule);
+  margin: 5px 8px 0;
+  padding-top: 4px;
+  border-top: 1px solid var(--page-sunk);
   font-variant-numeric: tabular-nums;
 }
 
-/* One line per weapon, dense on purpose: a bag is a list, not a gallery. */
+/*
+ * A bag is a list of weapons, striped like every other list on the site so a
+ * table and an offer do not look like they came from different places.
+ */
 .wares {
   margin: 0;
   padding: 0;
   list-style: none;
+  font-variant-numeric: tabular-nums;
 }
 
 .ware {
   display: flex;
   align-items: center;
   gap: 7px;
-  padding: 2px 3px;
-  font-variant-numeric: tabular-nums;
+  padding: 3px 8px;
+  border-bottom: 1px solid var(--page-sunk);
 }
 
 .ware:nth-child(odd) {
-  background: rgba(138, 117, 80, 0.12);
+  background: var(--page-alt);
+}
+
+.ware:last-child {
+  border-bottom: none;
 }
 
 .ware__id {
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: 10.5px;
   color: var(--text-dim);
 }
 
 .ware__fact {
   margin-left: auto;
-  font-size: 11.5px;
+  font-size: 11px;
   color: var(--text-dim);
 }
 
 .ware--none {
-  padding: 4px 3px;
+  padding: 6px 8px;
   color: var(--text-dim);
   font-style: italic;
 }
@@ -434,115 +549,16 @@ body {
   display: flex;
   align-items: center;
   gap: 7px;
-  margin: 10px 0 0;
+  margin: 9px 0 0;
+  padding: 0 8px;
 }
 
 .gold-field .field__input {
-  width: 110px;
+  width: 96px;
 }
 
 .gold-field span {
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: bold;
-  color: var(--text-dim);
-}
-
-/* ----------------------------------------------------------------- home - */
-
-/*
- * The steps somebody actually follows to get in, numbered because they are a
- * sequence: the token does not exist until the address is confirmed, and the
- * client cannot start until the token is in its file.
- */
-.steps {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  counter-reset: step;
-}
-
-.steps li {
-  position: relative;
-  counter-increment: step;
-  padding: 6px 0 6px 30px;
-  border-bottom: 1px solid var(--rule);
-}
-
-.steps li:last-child {
-  border-bottom: none;
-}
-
-.steps li::before {
-  content: counter(step);
-  position: absolute;
-  left: 0;
-  top: 6px;
-  width: 19px;
-  height: 19px;
-  line-height: 19px;
-  text-align: center;
-  font-size: 11px;
-  font-weight: bold;
-  color: var(--text-on-bar);
-  background: var(--bar);
-  border: 1px solid var(--rule-dark);
-}
-
-.address {
-  display: block;
-  padding: 6px 8px;
-  margin: 4px 0 10px;
-  font-family: var(--mono);
-  font-size: 12.5px;
-  word-break: break-all;
-  background: #fbf4e6;
-  border: 1px solid var(--rule);
-  box-shadow: inset 1px 1px 2px rgba(92, 74, 46, 0.28);
-}
-
-/* ------------------------------------------------------------- boards - */
-
-.board {
-  width: 100%;
-  border-collapse: collapse;
-  font-variant-numeric: tabular-nums;
-}
-
-.board th {
-  padding: 4px 8px;
-  text-align: left;
-  font-size: 11px;
-  color: var(--text-on-bar);
-  background: var(--bar);
-  border-bottom: 1px solid var(--rule-dark);
-}
-
-.board td {
-  padding: 4px 8px;
-  border-bottom: 1px solid var(--rule);
-}
-
-.board tbody tr:nth-child(odd) td {
-  background: var(--page-alt);
-}
-
-.board tbody tr:last-child td {
-  border-bottom: none;
-}
-
-.board__rank {
-  width: 2.5em;
-  text-align: right;
-  color: var(--text-dim);
-}
-
-.board__value {
-  text-align: right;
-  white-space: nowrap;
-}
-
-.board__who {
-  font-family: var(--mono);
-  font-size: 11px;
   color: var(--text-dim);
 }

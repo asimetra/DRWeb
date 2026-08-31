@@ -1,19 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { api, ApiError } from "../api.js";
-import { Box, Footnote, Notice, Quiet, TopBar } from "../components/Chrome.jsx";
-
-/**
- * The boards, readable by anybody.
- *
- * Two of the three are shown. `speedrun` is scoped to a map node, a hero and a
- * party size, and naming those needs the game's own tables, which this
- * application does not have — so it is reachable by URL and has no picker yet.
- */
-export const BOARDS = [
-  { metric: "experience", title: "Experience", unit: "earned, all heroes" },
-  { metric: "clears", title: "Dungeons Cleared", unit: "finished, ever" },
-];
+import { Box, Notice, Page } from "../components/Chrome.jsx";
 
 const whole = new Intl.NumberFormat("en-GB");
 
@@ -24,6 +12,12 @@ export const showValue = (metric, value) => {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 };
 
+const HEADING = { speedrun: "Time", clears: "Clears", experience: "Experience" };
+
+/**
+ * A board, as the table itself: flush to its frame, header in the frame's own
+ * colour, rows striped. It is the shape every list on this site takes.
+ */
 export const Standings = ({ metric, limit = 20, scope = {} }) => {
   const [board, setBoard] = useState(null);
   const [problem, setProblem] = useState("");
@@ -32,35 +26,39 @@ export const Standings = ({ metric, limit = 20, scope = {} }) => {
     api.leaderboard(metric, { limit, ...scope }).then(setBoard, (failure) =>
       setProblem(failure instanceof ApiError ? failure.message : "Something went wrong.")
     );
-    // The scope object is rebuilt on every render; its contents are what matter.
+    // The scope object is rebuilt each render; its contents are what matter.
   }, [metric, limit, JSON.stringify(scope)]);
 
-  if (problem) return <Notice kind="bad">{problem}</Notice>;
-  if (!board) return <p className="wait">Loading…</p>;
+  if (problem) {
+    return (
+      <div style={{ padding: "9px 10px" }}>
+        <Notice kind="bad">{problem}</Notice>
+      </div>
+    );
+  }
+  if (!board) return <p className="table__empty">Loading…</p>;
   if (!board.entries.length) {
-    return <p className="wait">Nobody has finished a run on this board yet.</p>;
+    return <p className="table__empty">Nobody has finished a run on this board yet.</p>;
   }
 
   return (
-    <table className="board">
+    <table className="table">
       <thead>
         <tr>
-          <th className="board__rank">#</th>
+          <th className="table__rank">#</th>
           <th>Player</th>
-          <th className="board__value">
-            {metric === "speedrun" ? "Time" : metric === "clears" ? "Clears" : "Experience"}
-          </th>
+          <th className="table__num">{HEADING[metric] ?? "Value"}</th>
         </tr>
       </thead>
       <tbody>
         {board.entries.map((entry) => (
           <tr key={entry.account_id}>
-            <td className="board__rank">{entry.rank}</td>
+            <td className="table__rank">{entry.rank}</td>
             <td>
               {entry.name || "unnamed"}{" "}
-              <span className="board__who">({entry.account_id})</span>
+              <span className="table__quiet">{entry.account_id}</span>
             </td>
-            <td className="board__value">{showValue(metric, entry.value)}</td>
+            <td className="table__num">{showValue(metric, entry.value)}</td>
           </tr>
         ))}
       </tbody>
@@ -74,13 +72,11 @@ export const Leaderboard = () => {
   const hero = Number(params.get("hero"));
 
   return (
-    <>
-      <TopBar where="Leaderboards" />
-
+    <Page where="Leaderboards">
       {node > 0 && hero > 0 ? (
         <Box
-          title="Fastest Clear"
-          lede={`Map node ${node}, hero ${hero}, party of ${params.get("party") || 1}. Successful runs only.`}
+          title={`Fastest Clear — node ${node}, hero ${hero}, party of ${params.get("party") || 1}`}
+          flush
         >
           <Standings
             metric="speedrun"
@@ -90,29 +86,28 @@ export const Leaderboard = () => {
         </Box>
       ) : null}
 
-      {BOARDS.map((board) => (
-        <Box key={board.metric} title={board.title} lede={board.unit}>
-          <Standings metric={board.metric} limit={20} />
-        </Box>
-      ))}
+      <Box title="Experience" flush>
+        <Standings metric="experience" limit={20} />
+      </Box>
+
+      <Box title="Dungeons Cleared" flush>
+        <Standings metric="clears" limit={20} />
+      </Box>
 
       <Box title="About These Boards">
-        <p>
-          A run is recorded when its report screen is generated, and the
-          standings are folded in at the same moment. Nothing is ranked that
-          everybody converges on: kills and total damage are set by the floor
-          build, gold is partly the reward roll, and damage taken is mostly who
-          else was in the party.
+        <p style={{ marginTop: 0 }}>
+          A run is recorded when its report screen is generated. Nothing is
+          ranked that everybody converges on: kills and total damage are set by
+          the floor build, gold is partly the reward roll, and damage taken is
+          mostly who else was in the party.
         </p>
-        <p>
-          Infinite Island appears on no board. It has no last floor, so a clear
-          time is not something that exists there.
+        <p style={{ marginBottom: 0 }}>
+          Fastest-clear boards are per map node, hero and party size, and are
+          reached with <code>?node=…&amp;hero=…&amp;party=…</code>. Infinite
+          Island is on no board: it has no last floor, so a clear time is not
+          something that exists there.
         </p>
-        <Footnote>
-          Fastest-clear boards are per map node, hero and party size. Reach one
-          with <code>?node=…&amp;hero=…&amp;party=…</code>.
-        </Footnote>
       </Box>
-    </>
+    </Page>
   );
 };

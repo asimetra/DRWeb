@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api, ApiError } from "../api.js";
-import { Box, Button, Buttons, Field, Footnote, Notice, Quiet, TopBar } from "../components/Chrome.jsx";
+import { Box, Button, Buttons, Field, Footnote, Notice, Quiet, Page } from "../components/Chrome.jsx";
 import { useViewer } from "../viewer.jsx";
 
 export const Login = () => {
@@ -28,8 +28,7 @@ export const Login = () => {
   };
 
   return (
-    <>
-      <TopBar where="Login" />
+    <Page where="Login">
       <Box title="Account Login">
         <Notice kind="bad">{problem}</Notice>
         <form onSubmit={submit}>
@@ -63,6 +62,6 @@ export const Login = () => {
           <Quiet to="/register">Create an account</Quiet>
         </Footnote>
       </Box>
-    </>
+    </Page>
   );
 };

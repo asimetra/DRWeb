@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { api, ApiError } from "../api.js";
-import { Box, Footnote, Notice, Quiet, TopBar } from "../components/Chrome.jsx";
+import { Box, Footnote, Notice, Quiet, Page } from "../components/Chrome.jsx";
 import { useViewer } from "../viewer.jsx";
 import { GameToken } from "../components/GameToken.jsx";
 
@@ -43,19 +43,17 @@ export const Verify = () => {
 
   if (state.status === "working") {
     return (
-      <>
-        <TopBar where="Confirm Email" />
+      <Page where="Confirm Email">
         <Box title="Confirm Email">
           <p className="wait">Checking the link…</p>
         </Box>
-      </>
+      </Page>
     );
   }
 
   if (state.status === "failed") {
     return (
-      <>
-        <TopBar where="Confirm Email" />
+      <Page where="Confirm Email">
         <Box title="Confirm Email">
           <Notice kind="bad">{state.problem}</Notice>
           <p>
@@ -66,13 +64,12 @@ export const Verify = () => {
             <Quiet to="/login">Back to login</Quiet>
           </Footnote>
         </Box>
-      </>
+      </Page>
     );
   }
 
   return (
-    <>
-      <TopBar where="Confirm Email" />
+    <Page where="Confirm Email">
       <Box title="Account Created">
         {state.game ? (
           <GameToken game={state.game} />
@@ -83,6 +80,6 @@ export const Verify = () => {
           <Quiet to="/account">Go to account management</Quiet>
         </Footnote>
       </Box>
-    </>
+    </Page>
   );
 };

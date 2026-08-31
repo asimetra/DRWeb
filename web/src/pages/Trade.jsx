@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api, ApiError } from "../api.js";
-import { Box, Button, Buttons, Field, Footnote, Notice, Quiet, TopBar } from "../components/Chrome.jsx";
+import { Box, Button, Buttons, Field, Footnote, Notice, Quiet, Page } from "../components/Chrome.jsx";
 
 const Ware = ({ item, children }) => (
   <li className="ware">
@@ -61,8 +61,7 @@ const StartTrade = () => {
   };
 
   return (
-    <>
-      <TopBar where="Trade" />
+    <Page where="Trade">
       <Box title="Start a Trade" lede="Enter the account id of the player you want to trade with.">
         <Notice kind="bad">{problem}</Notice>
         <form onSubmit={submit}>
@@ -83,7 +82,7 @@ const StartTrade = () => {
           <Quiet to="/account">Back to account management</Quiet>
         </Footnote>
       </Box>
-    </>
+    </Page>
   );
 };
 
@@ -123,13 +122,12 @@ const OpenTrade = ({ id }) => {
 
   if (!trade) {
     return (
-      <>
-        <TopBar where="Trade" />
+      <Page where="Trade">
         <Box title="Trade">
           <Notice kind="bad">{problem}</Notice>
           {problem ? null : <p className="wait">Loading…</p>}
         </Box>
-      </>
+      </Page>
     );
   }
 
@@ -142,8 +140,7 @@ const OpenTrade = ({ id }) => {
   };
 
   return (
-    <>
-      <TopBar where="Trade" />
+    <Page where="Trade">
 
       <Box title={`Trade #${trade.id}`}>
         <Notice kind="bad">{problem}</Notice>
@@ -187,9 +184,12 @@ const OpenTrade = ({ id }) => {
       </Box>
 
       {closed ? null : (
-        <Box title="Your Bag" lede="Equipped weapons cannot be traded. Unequip them in the game first.">
+        <Box title="Your Bag" flush>
           {bag ? (
             <>
+              <p className="ware ware--none" style={{ fontStyle: "normal" }}>
+                Equipped weapons cannot be traded. Unequip them in the game first.
+              </p>
               <ul className="wares">
                 {bag.items.length ? (
                   bag.items.map((item) => (
@@ -217,7 +217,7 @@ const OpenTrade = ({ id }) => {
                 <span>of {bag.gold}</span>
               </p>
 
-              <Buttons>
+              <Buttons style={{ padding: "0 8px 9px" }}>
                 <Button
                   type="button"
                   disabled={busy}
@@ -234,7 +234,7 @@ const OpenTrade = ({ id }) => {
           )}
         </Box>
       )}
-    </>
+    </Page>
   );
 };
 

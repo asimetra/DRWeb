@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { api, ApiError } from "../api.js";
-import { Box, Button, Buttons, Field, Footnote, Notice, Quiet, TopBar } from "../components/Chrome.jsx";
+import { Box, Button, Buttons, Field, Footnote, Notice, Quiet, Page } from "../components/Chrome.jsx";
 import { useViewer } from "../viewer.jsx";
 import { GameToken } from "../components/GameToken.jsx";
 
@@ -29,8 +29,7 @@ export const Reset = () => {
 
   if (done) {
     return (
-      <>
-        <TopBar where="Reset Password" />
+      <Page where="Reset Password">
         <Box title="Password Changed">
           <Notice kind="good">
             All sessions were closed and every game token for this account was
@@ -42,13 +41,12 @@ export const Reset = () => {
             <Quiet to="/account">Go to account management</Quiet>
           </Footnote>
         </Box>
-      </>
+      </Page>
     );
   }
 
   return (
-    <>
-      <TopBar where="Reset Password" />
+    <Page where="Reset Password">
       <Box title="Choose a New Password" lede="Anything signed in with the old password will be logged out.">
         <Notice kind="bad">{problem}</Notice>
         <form onSubmit={submit}>
@@ -73,6 +71,6 @@ export const Reset = () => {
           <Quiet to="/forgot">Request another link</Quiet>
         </Footnote>
       </Box>
-    </>
+    </Page>
   );
 };

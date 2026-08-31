@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { api, ApiError } from "../api.js";
-import { Box, Button, Buttons, Field, Footnote, Notice, Quiet, TopBar } from "../components/Chrome.jsx";
+import { Box, Button, Buttons, Field, Footnote, Notice, Quiet, Page } from "../components/Chrome.jsx";
 
 export const Register = () => {
   const [form, setForm] = useState({ email: "", password: "" });
@@ -27,8 +27,7 @@ export const Register = () => {
 
   if (sent) {
     return (
-      <>
-        <TopBar where="Create Account" />
+      <Page where="Create Account">
         <Box title="Check your email">
           <p>
             A confirmation link has been sent to <strong>{form.email}</strong>.
@@ -53,13 +52,12 @@ export const Register = () => {
             <Quiet to="/login">Back to login</Quiet>
           </Footnote>
         </Box>
-      </>
+      </Page>
     );
   }
 
   return (
-    <>
-      <TopBar where="Create Account" />
+    <Page where="Create Account">
       <Box title="Create Account">
         <Notice kind="bad">{problem}</Notice>
         <form onSubmit={submit}>
@@ -93,6 +91,6 @@ export const Register = () => {
           Already registered? <Quiet to="/login">Log in</Quiet>
         </Footnote>
       </Box>
-    </>
+    </Page>
   );
 };

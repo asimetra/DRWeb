@@ -74,10 +74,18 @@ Anything that is not `/api/…` and not a file on disk is answered with
 `index.html`, because `/verify?token=…` is a URL somebody opens from their mail
 rather than a route the server handles.
 
-The look is cream content boxes on a dark ground, brown rules, Verdana at 13px
-— the shape an older game's account pages take. No display face, no webfont, no
-ornament: a heading is a bar with a noun in it. The copy matches. Buttons say
-what they do and nothing narrates.
+Two columns. The left one holds who you are signed in as — or a login form when
+nobody is — and the navigation, so it is always reachable and the main column is
+never spent on it. The right one is only ever the page itself.
+
+Every box is a band of frame with a lighter panel set into it and the title
+sitting on the band; that one repeated device is what makes a page of unlike
+things read as one site. Tables are the panel rather than something laid inside
+it: flush to the frame, header bar in the frame's own colour, rows striped. Fact
+lists use the same stripes so the two agree.
+
+No display face, no webfont, no ornament. The copy matches: buttons say what
+they do and nothing narrates.
 
 ## Configuration
 
@@ -133,7 +141,7 @@ with it — fetch a fresh one afterwards.
 
 ## What is public
 
-The front page, the leaderboards and the connection details need no account. A
+The front page and the leaderboards need no account. A
 server people are being invited to play on has to be able to say what it is and
 who is doing well on it before it asks them for an address and a password, and
 until now `/` was a redirect to a login form.

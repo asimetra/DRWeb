@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { api } from "../api.js";
-import { Box, Button, Buttons, Field, Footnote, Quiet, TopBar } from "../components/Chrome.jsx";
+import { Box, Button, Buttons, Field, Footnote, Quiet, Page } from "../components/Chrome.jsx";
 
 export const Forgot = () => {
   const [email, setEmail] = useState("");
@@ -18,8 +18,7 @@ export const Forgot = () => {
 
   if (sent) {
     return (
-      <>
-        <TopBar where="Reset Password" />
+      <Page where="Reset Password">
         <Box title="Reset Password">
           <p>If an account exists for that address, a reset link is on its way to it.</p>
           <p>
@@ -30,13 +29,12 @@ export const Forgot = () => {
             <Quiet to="/login">Back to login</Quiet>
           </Footnote>
         </Box>
-      </>
+      </Page>
     );
   }
 
   return (
-    <>
-      <TopBar where="Reset Password" />
+    <Page where="Reset Password">
       <Box title="Reset Password" lede="Enter the email address you registered with.">
         <form onSubmit={submit}>
           <Field
@@ -58,6 +56,6 @@ export const Forgot = () => {
           <Quiet to="/login">Back to login</Quiet>
         </Footnote>
       </Box>
-    </>
+    </Page>
   );
 };
