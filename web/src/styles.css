@@ -129,28 +129,27 @@ a:hover { color: var(--link-hot); }
    anything is asked of the reader. */
 .shell { padding: clamp(1.75rem, 6vw, 4rem) 0 3rem; }
 
-/* No band across the top: that strip is the one part of the page where the art
-   is worth looking at, and a solid bar spends it on links. */
-.masthead { max-width: 1140px; margin: 0 auto 0.9rem; padding: 0 14px; }
-.masthead__inner {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 14px;
-  flex-wrap: wrap;
-}
-.masthead__name {
+/*
+ * No band across the top. That strip is the one part of the page where the art
+ * is worth looking at, and a bar of links spends it — so what opens the page is
+ * the page's own name over the picture, and under it the one line that changes:
+ * who is afield and what has been run today. Navigation lives in the left rail
+ * with the character, which is where these sites have always kept it.
+ */
+.crest { max-width: 78rem; margin: 0 auto; padding: 0 1rem; }
+.crest__name {
   margin: 0;
   font-family: var(--display);
-  font-size: clamp(1.5rem, 4.4vw, 2.2rem);
+  font-size: clamp(1.6rem, 4.4vw, 2.4rem);
   font-weight: 400;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
   color: var(--text-on-frame);
   text-decoration: none;
   text-shadow: 0 3px 22px rgba(0, 0, 0, 0.95);
 }
-.masthead__where {
-  font-size: 12px;
+.crest__line {
+  margin: 0.1rem 0 0;
+  font-size: 0.82rem;
   color: var(--text-dim);
   text-shadow: 0 1px 8px rgba(0, 0, 0, 0.9);
 }
@@ -160,22 +159,22 @@ a:hover { color: var(--link-hot); }
   /* Three columns: who you are on the left, the page in the middle, the
      standings on the right. Narrow enough and the standings fold away first,
      then the account rail — the middle column never does. */
-  grid-template-columns: 196px minmax(0, 1fr) 196px;
-  gap: 14px;
-  max-width: 1140px;
+  grid-template-columns: 13.5rem minmax(0, 1fr) 13.5rem;
+  gap: 1rem;
+  max-width: 78rem;
   margin: 0 auto;
-  padding: 0 14px 48px;
+  padding: 0.9rem 1rem 3rem;
   align-items: start;
 }
-@media (max-width: 1040px) {
-  .layout { grid-template-columns: 196px minmax(0, 1fr); }
+@media (max-width: 68rem) {
+  .layout { grid-template-columns: 13.5rem minmax(0, 1fr); }
   .column--aside { display: none; }
 }
-@media (max-width: 700px) {
+@media (max-width: 46rem) {
   .layout { grid-template-columns: minmax(0, 1fr); }
   .column--aside { display: none; }
 }
-.column > * + * { margin-top: 12px; }
+.column > * + * { margin-top: 0.85rem; }
 
 /* ------------------------------------------------------------------ box - */
 
@@ -214,19 +213,147 @@ a:hover { color: var(--link-hot); }
   gap: 0.4rem;
 }
 
-.box__body { padding: 0.6rem 0.7rem; }
+/*
+ * The right-hand end of a title bar, for the qualifier the heading itself
+ * cannot carry: "level 100", "all dungeons", "top 20". It is in the sans
+ * because the display face has no digits, and quiet because it is a caption on
+ * the heading rather than a second heading.
+ */
+.box__title .more {
+  margin-left: auto;
+  font-family: var(--sans);
+  font-size: 0.7rem;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  color: var(--text-faint);
+}
+
+.box__body { padding: 0.55rem 0.7rem; }
 /** Tables and lists are the panel, not something laid inside it. */
 .box__body--flush { padding: 0; }
 
 .lede { color: var(--text-dim); margin: 0 0 0.6rem; }
 
+/* ----------------------------------------------------------------- rail - */
+
+/*
+ * A label and its number, dotted apart.
+ *
+ * The rails ran on the same ruled table the boards use, which put a grid of
+ * borders into a 13.5rem column to say four things. A margin wants the lightest
+ * rule that still separates — the table stays where there is a table's worth of
+ * data to read down.
+ */
+.stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.22rem 0;
+  font-size: 0.83rem;
+}
+.stat + .stat { border-top: 1px dotted rgba(190, 160, 105, 0.13); }
+.stat__k { color: var(--text-dim); }
+.stat__v { font-variant-numeric: tabular-nums; font-weight: 600; text-align: right; }
+
+/** A board in five lines. The rank wears the ladder the full table does. */
+.mini { list-style: none; margin: 0; padding: 0; }
+.mini li {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.22rem 0;
+  font-size: 0.83rem;
+}
+.mini li + li { border-top: 1px dotted rgba(190, 160, 105, 0.13); }
+.mini__pos {
+  width: 1.1rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--r-common);
+}
+.mini li:nth-child(1) .mini__pos { color: var(--r-legendary); text-shadow: 0 0 9px var(--r-legendary-glow); }
+.mini li:nth-child(2) .mini__pos { color: var(--r-rare); }
+.mini li:nth-child(3) .mini__pos { color: var(--r-uncommon); }
+/** A long name gives way rather than widening the rail. */
+.mini__nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mini__vl { color: var(--text-dim); font-variant-numeric: tabular-nums; font-size: 0.78rem; }
+
 /* ---------------------------------------------------------------- table - */
+
+/* --------------------------------------------------------------- centre - */
+
+/** What the middle column is, and the scope it is showing. */
+.board-head {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+.board-head h2 {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 1.7rem;
+  letter-spacing: 0.03em;
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.9);
+}
+.board-head__where { color: var(--text-dim); font-size: 0.82rem; padding-bottom: 0.25rem; }
+
+/*
+ * Three boards, one table. Stacking them down the page made the reader scroll
+ * past two to reach the one they came for, and gave the middle column three
+ * headings where it wants one.
+ */
+.tabs { display: flex; gap: 1.1rem; border-bottom: 1px solid var(--rule); margin-bottom: 0.6rem; }
+.tab {
+  font-family: var(--display);
+  font-size: 0.92rem;
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: var(--text-dim);
+  padding: 0.4rem 0;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.tab:hover { color: var(--text); }
+.tab[aria-selected="true"] { color: var(--text); border-bottom-color: var(--text); }
+
+.filters { display: flex; flex-wrap: wrap; gap: 0.5rem 0.9rem; align-items: center; }
+.filters label { color: var(--text-dim); font-size: 0.8rem; margin-right: 0.25rem; }
+.filters select {
+  font: inherit;
+  font-size: 0.8rem;
+  color: var(--text);
+  background: var(--page-lit);
+  border: 1px solid var(--frame);
+  padding: 0.2rem 0.35rem;
+}
+
+.pager {
+  display: flex;
+  gap: 0.3rem;
+  align-items: center;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  border-top: 1px solid var(--rule);
+}
+.pager__count { margin-left: auto; }
 
 /*
  * Ruled on all four sides of every cell. That one thing reads as an older site
  * more than any colour choice does: a grid you read down, rather than a modern
  * list with air in it.
  */
+/** Six ruled columns will not fold; they scroll inside the panel instead. */
+.table-wrap { overflow-x: auto; }
+.table-wrap .table { min-width: 34rem; }
 .table { border-collapse: collapse; width: 100%; font-size: 0.82rem; }
 .table th {
   text-align: left;
@@ -250,6 +377,8 @@ a:hover { color: var(--link-hot); }
 
 .table__num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .table__quiet { color: var(--text-dim); }
+.table__when { color: var(--text-dim); font-size: 0.78rem; white-space: nowrap; }
+.name { font-weight: 600; }
 .table__empty { color: var(--text-dim); text-align: center; padding: 1.1rem 0.55rem; }
 
 /*
@@ -268,16 +397,25 @@ a:hover { color: var(--link-hot); }
 .table tbody tr:nth-child(3) .table__rank { color: var(--r-uncommon); }
 
 /* The character panel's portrait and name. */
-.who { display: flex; align-items: center; gap: 0.55rem; padding: 0.6rem 0.7rem; border-bottom: 1px solid var(--rule); }
-.who__hero { display: block; font-weight: 600; }
-.who__level { display: block; font-size: 0.78rem; color: var(--text-dim); }
+.who {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-bottom: 0.4rem;
+  margin-bottom: 0.3rem;
+  border-bottom: 1px solid var(--rule);
+}
+.who__hero { display: block; font-weight: 600; font-size: 0.84rem; }
+.who__level { display: block; font-size: 0.75rem; color: var(--text-dim); }
 .portrait {
-  width: 36px; height: 36px; flex: none; image-rendering: pixelated;
+  width: 26px; height: 26px; flex: none; image-rendering: pixelated;
   background: var(--page-sunk) center / cover no-repeat;
   border: 1px solid var(--frame-dark);
   display: grid; place-items: center;
-  font-size: 0.7rem; color: var(--text-faint);
+  font-size: 0.6rem; color: var(--text-faint);
 }
+/** Your own is larger, and wears a colour so you find yourself at a glance. */
+.portrait--me { width: 34px; height: 34px; font-size: 0.7rem; border-color: var(--r-uncommon); }
 
 /*
  * A title wears the tier its trophy count earned, so the ladder reads the same
@@ -386,6 +524,15 @@ a:hover { color: var(--link-hot); }
 .link:hover { color: var(--link-hot); }
 .footnote { color: var(--text-faint); font-size: 0.76rem; }
 .wait { color: var(--text-dim); font-style: italic; }
+
+.site-foot {
+  max-width: 78rem;
+  margin: 0 auto;
+  padding: 0.6rem 1rem 2rem;
+  color: var(--text-faint);
+  font-size: 0.74rem;
+}
+code { font-family: var(--mono); color: var(--text-dim); }
 
 @media (prefers-reduced-motion: no-preference) {
   .table tbody tr, .menu a, .button, a { transition: color 110ms ease, background 110ms ease; }

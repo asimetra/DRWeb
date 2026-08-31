@@ -5,9 +5,18 @@ import { useViewer } from "../viewer.jsx";
 
 /* ------------------------------------------------------------------ box - */
 
-export const Box = ({ title, lede, flush = false, children }) => (
+/**
+ * `more` is the right-hand end of the title bar — the qualifier the heading
+ * cannot carry because the display face has no digits: "level 100", "top 20".
+ */
+export const Box = ({ title, more, lede, flush = false, children }) => (
   <section className="box">
-    {title ? <h2 className="box__title">{title}</h2> : null}
+    {title ? (
+      <h2 className="box__title">
+        {title}
+        {more ? <span className="more">{more}</span> : null}
+      </h2>
+    ) : null}
     <div className={flush ? "box__body box__body--flush" : "box__body"}>
       {lede ? <p className="lede">{lede}</p> : null}
       {children}
@@ -60,57 +69,40 @@ export const Fact = ({ label, children }) => (
   </tr>
 );
 
+/**
+ * The rail's version of the same thing: a label, a number, and a dotted rule
+ * between. A ruled table in a 13.5rem column is a grid of borders drawn to say
+ * four things — the table earns its rules where there is a table's worth of
+ * data to read down, and a margin does not have one.
+ */
+export const Stat = ({ label, children }) => (
+  <div className="stat">
+    <span className="stat__k">{label}</span>
+    <span className="stat__v">{children}</span>
+  </div>
+);
+
 /* -------------------------------------------------------------- sidebar - */
 
 /**
- * The left column, which is the point of the layout.
+ * The way in, and only when there is no way in yet.
  *
  * Signed out it is a login form, always on screen — a visitor never has to go
- * looking for the way in. Signed in it is who you are: the address, the account
- * id the client uses, and whether the address has been confirmed, which is the
- * one fact that changes what the rest of the site will let you do.
+ * looking for it. Signed in there is no account box at all: the character panel
+ * above is who you are, and managing the account is a line in the menu below,
+ * where the rest of the site's destinations already live. Two panels both
+ * answering "who are you" is what was overflowing the rail, and the address was
+ * the string doing the overflowing.
  */
-const AccountBox = () => {
+const LogInBox = () => {
   const navigate = useNavigate();
   const { viewer, ready, refresh } = useViewer();
   const [form, setForm] = useState({ email: "", password: "" });
   const [problem, setProblem] = useState("");
   const [busy, setBusy] = useState(false);
 
-  if (!ready) return <Box title="Account" />;
-
-  if (viewer) {
-    return (
-      <Box title="Account" flush>
-        <Facts>
-          <Fact label="Email">{viewer.email}</Fact>
-          <Fact label="Account">{viewer.accountId ?? "none"}</Fact>
-          <Fact label="Confirmed">{viewer.verified ? "yes" : "no"}</Fact>
-        </Facts>
-        <ul className="menu" style={{ borderTop: "1px solid var(--page-sunk)" }}>
-          <li>
-            <Link to="/account">Manage account</Link>
-          </li>
-          <li>
-            <Link to="/trade">Trade</Link>
-          </li>
-          <li>
-            <a
-              href="/"
-              onClick={async (event) => {
-                event.preventDefault();
-                await api.logout();
-                await refresh();
-                navigate("/");
-              }}
-            >
-              Log out
-            </a>
-          </li>
-        </ul>
-      </Box>
-    );
-  }
+  if (!ready) return <Box title="Log In" />;
+  if (viewer) return null;
 
   const submit = async (event) => {
     event.preventDefault();
@@ -200,22 +192,15 @@ const CharacterBox = () => {
 
   const hero = player.hero;
   return (
-    <Box title={player.name || "Character"} flush>
+    <Box title={player.name || "Character"} more={hero ? `level ${hero.level}` : null}>
       {hero ? (
         <div className="who">
           <span
-            className="portrait"
+            className="portrait portrait--me"
             title={hero.name}
-            style={
-              hero.icon
-                ? { backgroundImage: `url(${GAME_ICONS}${hero.icon}.png)` }
-                : undefined
-            }
+            style={hero.icon ? { backgroundImage: `url(${GAME_ICONS}${hero.icon}.png)` } : undefined}
           >
-            {hero.name
-              .split(" ")
-              .map((word) => word[0])
-              .join("")}
+            {hero.name.split(" ").map((word) => word[0]).join("")}
           </span>
           <span>
             <span className="who__hero">{hero.name}</span>
@@ -223,19 +208,17 @@ const CharacterBox = () => {
           </span>
         </div>
       ) : null}
-      <Facts>
-        {player.title ? (
-          <Fact label="Title">
-            <span className={`title title--${player.title.tier}`}>{player.title.name}</span>
-          </Fact>
-        ) : null}
-        <Fact label="Trophies">
-          {player.trophies}
-          <span className="table__quiet"> / {player.trophies_of}</span>
-        </Fact>
-        <Fact label="Dungeons finished">{whole.format(player.clears ?? 0)}</Fact>
-        <Fact label="Heroes">{player.heroes}</Fact>
-      </Facts>
+      {player.title ? (
+        <Stat label="Title">
+          <span className={`title title--${player.title.tier}`}>{player.title.name}</span>
+        </Stat>
+      ) : null}
+      <Stat label="Trophies">
+        {player.trophies ?? 0}
+        <span className="table__quiet"> / {player.trophies_of ?? 12}</span>
+      </Stat>
+      <Stat label="Dungeons finished">{whole.format(player.clears ?? 0)}</Stat>
+      {player.heroes ? <Stat label="Heroes">{whole.format(player.heroes)}</Stat> : null}
     </Box>
   );
 };
@@ -246,6 +229,47 @@ const CharacterBox = () => {
  */
 const GAME_ICONS = "/content/Resources/Art2D/Icons/Avatars/";
 
+/*
+ * One poll for the whole page.
+ *
+ * The crest line and the server panel are the same four numbers, and two
+ * components each running their own minute timer would ask for them twice.
+ */
+let statusNow = null;
+let statusTimer = null;
+const watchers = new Set();
+
+const readStatus = () =>
+  api
+    .status()
+    .then(
+      (next) => (statusNow = next),
+      () => (statusNow = { reachable: false })
+    )
+    .then(() => watchers.forEach((tell) => tell(statusNow)));
+
+const useStatus = () => {
+  const [status, setStatus] = useState(statusNow);
+
+  useEffect(() => {
+    watchers.add(setStatus);
+    if (!statusTimer) {
+      readStatus();
+      // Slow enough to be free, often enough that "online now" is not a lie.
+      statusTimer = setInterval(readStatus, 60_000);
+    }
+    return () => {
+      watchers.delete(setStatus);
+      if (!watchers.size) {
+        clearInterval(statusTimer);
+        statusTimer = null;
+      }
+    };
+  }, []);
+
+  return status;
+};
+
 /**
  * The margin numbers, which is what a server portal has always put there.
  *
@@ -255,23 +279,7 @@ const GAME_ICONS = "/content/Resources/Art2D/Icons/Avatars/";
  * the wall and have plenty to say without it.
  */
 const ServerBox = () => {
-  const [status, setStatus] = useState(null);
-
-  useEffect(() => {
-    let live = true;
-    const read = () =>
-      api.status().then(
-        (next) => live && setStatus(next),
-        () => live && setStatus({ reachable: false })
-      );
-    read();
-    // Slow enough to be free, often enough that "online now" is not a lie.
-    const timer = setInterval(read, 60_000);
-    return () => {
-      live = false;
-      clearInterval(timer);
-    };
-  }, []);
+  const status = useStatus();
 
   if (!status) return <Box title="Server" />;
   if (status.reachable === false) {
@@ -283,15 +291,25 @@ const ServerBox = () => {
   }
 
   return (
-    <Box title="Server" flush>
-      <Facts>
-        <Fact label="Online now">{status.online ?? 0}</Fact>
-        <Fact label="In a dungeon">{status.in_dungeon ?? 0}</Fact>
-        <Fact label="Runs today">{whole.format(status.runs_today ?? 0)}</Fact>
-        <Fact label="Up for">{sinceStarted(status.uptime_seconds ?? 0)}</Fact>
-      </Facts>
+    <Box title="Server">
+      <Stat label="Online now">{whole.format(status.online ?? 0)}</Stat>
+      <Stat label="In a dungeon">{whole.format(status.in_dungeon ?? 0)}</Stat>
+      <Stat label="Runs today">{whole.format(status.runs_today ?? 0)}</Stat>
+      <Stat label="Up for">{sinceStarted(status.uptime_seconds ?? 0)}</Stat>
     </Box>
   );
+};
+
+/** The one line under the page's name: who is afield, and what today has been. */
+const crestLine = (status) => {
+  if (!status) return " ";
+  if (status.reachable === false) return "The game server is not answering.";
+  const afield = status.online ?? 0;
+  const runs = status.runs_today ?? 0;
+  const who =
+    afield === 0 ? "nobody afield" : afield === 1 ? "one adventurer afield" : `${whole.format(afield)} adventurers afield`;
+  const done = runs === 0 ? "no runs yet today" : runs === 1 ? "one run today" : `${whole.format(runs)} runs today`;
+  return `${who} · ${done}`;
 };
 
 const whole = new Intl.NumberFormat("en-GB");
@@ -311,7 +329,7 @@ const sinceStarted = (seconds) => {
  * The rank wears the rarity ladder the same way the full table does, so a
  * colour means the same thing wherever it turns up on the site.
  */
-const MiniBoard = ({ title, metric, format }) => {
+const MiniBoard = ({ title, more, metric, format }) => {
   const [entries, setEntries] = useState(null);
 
   useEffect(() => {
@@ -325,94 +343,151 @@ const MiniBoard = ({ title, metric, format }) => {
     };
   }, [metric]);
 
-  if (!entries) return <Box title={title} />;
+  if (!entries) return <Box title={title} more={more} />;
   if (!entries.length) {
     return (
-      <Box title={title}>
+      <Box title={title} more={more}>
         <p className="wait">Nobody yet.</p>
       </Box>
     );
   }
 
   return (
-    <Box title={title} flush>
-      <table className="table">
-        <tbody>
-          {entries.map((entry) => (
-            <tr key={entry.account_id}>
-              <td className="table__rank">{entry.rank}</td>
-              <td>{entry.name || "unnamed"}</td>
-              <td className="table__num">{format(entry.value)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <Box title={title} more={more}>
+      <ul className="mini">
+        {entries.map((entry) => (
+          <li key={entry.account_id}>
+            <span className="mini__pos">{entry.rank}</span>
+            <span className="mini__nm">{entry.name || "unnamed"}</span>
+            <span className="mini__vl">{format(entry.value)}</span>
+          </li>
+        ))}
+      </ul>
     </Box>
   );
 };
 
-const asTime = (ms) => {
-  const seconds = Math.round(ms / 1000);
-  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
-};
 const asCount = (value) => whole.format(value);
 
-const Menu = () => (
-  <Box title="Navigation" flush>
-    <ul className="menu">
-      <li>
-        <NavLink to="/" end>
-          News
-        </NavLink>
-      </li>
-      <li>
-        <NavLink to="/leaderboard">Hall of Deeds</NavLink>
-      </li>
-      <li>
-        <NavLink to="/trade">Trade</NavLink>
-      </li>
-      <li>
-        <NavLink to="/account">Account</NavLink>
-      </li>
-    </ul>
-  </Box>
-);
+/**
+ * Where the site goes, and — when there is somebody to sign out — the account
+ * lines too. Managing an account is a destination like any other, and giving it
+ * a panel of its own in the margin was a second answer to a question the
+ * character panel had already answered.
+ */
+const Menu = () => {
+  const navigate = useNavigate();
+  const { viewer, ready, refresh } = useViewer();
+
+  return (
+    <Box title="Menu" flush>
+      <ul className="menu">
+        <li>
+          <NavLink to="/" end>
+            News
+          </NavLink>
+        </li>
+        <li>
+          <NavLink to="/leaderboard">Hall of Deeds</NavLink>
+        </li>
+        <li>
+          <NavLink to="/trade">Trade</NavLink>
+        </li>
+        <li>
+          <NavLink to="/account">My account</NavLink>
+        </li>
+        {ready && viewer ? (
+          <li>
+            <a
+              href="/"
+              onClick={async (event) => {
+                event.preventDefault();
+                await api.logout();
+                await refresh();
+                navigate("/");
+              }}
+            >
+              Sign out
+            </a>
+          </li>
+        ) : null}
+      </ul>
+    </Box>
+  );
+};
+
+/**
+ * Signed up but not playing yet, which is the one thing neither the character
+ * panel nor the menu can say — there is no character to draw.
+ */
+const NotPlayingYet = () => {
+  const { viewer, ready } = useViewer();
+  if (!ready || !viewer || viewer.accountId) return null;
+  return (
+    <Box title="Character">
+      <p className="wait">
+        {viewer.verified ? "No game account yet." : "Confirm your address to play."}
+      </p>
+    </Box>
+  );
+};
 
 /* ----------------------------------------------------------------- page - */
 
 /**
- * Every page is this: a bar, a left column that does not change, and whatever
+ * Every page is this: a crest, a left column that does not change, and whatever
  * the page itself is. Nothing in the main column has to carry navigation.
  */
-export const Page = ({ where, children }) => (
-  <>
-    <div className="masthead">
-      <div className="masthead__inner">
-        <Link className="masthead__name" to="/">
-          Open Dungeon
-        </Link>
-        <span className="masthead__where">{where}</span>
-      </div>
-    </div>
+export const Page = ({ where, children }) => {
+  const status = useStatus();
 
-    <div className="layout">
-      <div className="column">
-        <CharacterBox />
-        <AccountBox />
-        <Menu />
-        <ServerBox />
+  return (
+    <>
+      <div className="crest">
+        <h1 className="crest__name">{where}</h1>
+        <p className="crest__line">{crestLine(status)}</p>
       </div>
-      <div className="column">{children}</div>
+
+      <div className="layout">
+        <div className="column">
+          <LogInBox />
+          <CharacterBox />
+          <NotPlayingYet />
+          <Menu />
+          <ServerBox />
+        </div>
+        <div className="column">{children}</div>
+        {/*
+          The right rail is the standings, always on screen. It is the reason
+          somebody opens a server's site on a weekday, so it does not wait behind
+          a link — and it is the first thing to fold away when the window is too
+          narrow to carry three columns.
+        */}
+        <div className="column column--aside">
+          <MiniBoard
+            title="Most Experience"
+            more="lifetime"
+            metric="experience"
+            format={asCount}
+          />
+          <MiniBoard
+            title="Dungeons Finished"
+            more="lifetime"
+            metric="clears"
+            format={asCount}
+          />
+        </div>
+      </div>
+
       {/*
-        The right rail is the standings, always on screen. It is the reason
-        somebody opens a server's site on a weekday, so it does not wait behind
-        a link — and it is the first thing to fold away when the window is too
-        narrow to carry three columns.
+        Where the art and the face came from. They are the game's own, served by
+        the game server at /content/… and never bundled into this repository —
+        which is a thing worth saying on the page rather than only in a comment.
       */}
-      <div className="column column--aside">
-        <MiniBoard title="Fastest Clears" metric="speedrun" format={asTime} />
-        <MiniBoard title="Most Experience" metric="experience" format={asCount} />
-      </div>
-    </div>
-  </>
-);
+      <footer className="site-foot">
+        Rank colours are the game's rarity ladder. Background art, headline face
+        and portraits are the game's own, served at <code>/content/…</code>.
+      </footer>
+    </>
+  );
+};

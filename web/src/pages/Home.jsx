@@ -10,17 +10,22 @@ import { Standings } from "./Leaderboard.jsx";
  * how to get in. What belongs here is what changed since they last looked.
  */
 export const Home = () => (
-  <Page where="Front page">
-    <Box title="Dungeons Cleared" flush>
+  <Page where="Open Dungeon">
+    <div className="board-head">
+      <h2>Dungeons Finished</h2>
+      <span className="board-head__where">lifetime · every hero</span>
+    </div>
+
+    <Box title="Standings" more="top 10" flush>
       <Standings metric="clears" limit={10} />
     </Box>
 
-    <Box title="Experience" flush>
+    <Box title="Most Experience" more="top 10" flush>
       <Standings metric="experience" limit={10} />
     </Box>
 
     <Box>
-      <Quiet to="/leaderboard">All leaderboards, including fastest clears</Quiet>
+      <Quiet to="/leaderboard">All boards, including fastest clears</Quiet>
     </Box>
   </Page>
 );
