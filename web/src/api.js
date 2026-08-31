@@ -69,6 +69,9 @@ export const api = {
   newGameToken: () => call("POST", "/api/game-token"),
 
   server: () => call("GET", "/api/server"),
+  /** Who is on and what has happened today, for the margins. */
+  status: () => attempt("GET", "/api/status"),
+
   leaderboard: (metric, scope = {}) => {
     const query = new URLSearchParams(
       Object.entries(scope).filter(([, value]) => value !== undefined && value !== null)

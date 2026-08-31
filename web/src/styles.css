@@ -131,7 +131,7 @@ a:hover { color: var(--link-hot); }
 
 /* No band across the top: that strip is the one part of the page where the art
    is worth looking at, and a solid bar spends it on links. */
-.masthead { max-width: 940px; margin: 0 auto 0.9rem; padding: 0 14px; }
+.masthead { max-width: 1140px; margin: 0 auto 0.9rem; padding: 0 14px; }
 .masthead__inner {
   display: flex;
   align-items: baseline;
@@ -157,15 +157,23 @@ a:hover { color: var(--link-hot); }
 
 .layout {
   display: grid;
-  grid-template-columns: 196px minmax(0, 1fr);
+  /* Three columns: who you are on the left, the page in the middle, the
+     standings on the right. Narrow enough and the standings fold away first,
+     then the account rail — the middle column never does. */
+  grid-template-columns: 196px minmax(0, 1fr) 196px;
   gap: 14px;
-  max-width: 940px;
+  max-width: 1140px;
   margin: 0 auto;
   padding: 0 14px 48px;
   align-items: start;
 }
+@media (max-width: 1040px) {
+  .layout { grid-template-columns: 196px minmax(0, 1fr); }
+  .column--aside { display: none; }
+}
 @media (max-width: 700px) {
   .layout { grid-template-columns: minmax(0, 1fr); }
+  .column--aside { display: none; }
 }
 .column > * + * { margin-top: 12px; }
 

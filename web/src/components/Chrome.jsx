@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { api, ApiError } from "../api.js";
 import { useViewer } from "../viewer.jsx";
@@ -161,16 +161,129 @@ const AccountBox = () => {
   );
 };
 
+/* --------------------------------------------------------------- widgets - */
+
+/**
+ * The margin numbers, which is what a server portal has always put there.
+ *
+ * A count rather than a roster — who exactly is online is a different question
+ * with a different answer about privacy. A game server that is down leaves this
+ * box quiet instead of taking the page with it: the boards live on this side of
+ * the wall and have plenty to say without it.
+ */
+const ServerBox = () => {
+  const [status, setStatus] = useState(null);
+
+  useEffect(() => {
+    let live = true;
+    const read = () =>
+      api.status().then(
+        (next) => live && setStatus(next),
+        () => live && setStatus({ reachable: false })
+      );
+    read();
+    // Slow enough to be free, often enough that "online now" is not a lie.
+    const timer = setInterval(read, 60_000);
+    return () => {
+      live = false;
+      clearInterval(timer);
+    };
+  }, []);
+
+  if (!status) return <Box title="Server" />;
+  if (status.reachable === false) {
+    return (
+      <Box title="Server">
+        <p className="wait">The game server is not answering.</p>
+      </Box>
+    );
+  }
+
+  return (
+    <Box title="Server" flush>
+      <Facts>
+        <Fact label="Online now">{status.online ?? 0}</Fact>
+        <Fact label="In a dungeon">{status.in_dungeon ?? 0}</Fact>
+        <Fact label="Runs today">{whole.format(status.runs_today ?? 0)}</Fact>
+        <Fact label="Up for">{sinceStarted(status.uptime_seconds ?? 0)}</Fact>
+      </Facts>
+    </Box>
+  );
+};
+
+const whole = new Intl.NumberFormat("en-GB");
+
+/** Days and hours: nobody reading a front page wants the seconds. */
+const sinceStarted = (seconds) => {
+  const days = Math.floor(seconds / 86_400);
+  const hours = Math.floor((seconds % 86_400) / 3600);
+  if (days) return `${days}d ${hours}h`;
+  const minutes = Math.floor((seconds % 3600) / 60);
+  return hours ? `${hours}h ${minutes}m` : `${minutes}m`;
+};
+
+/**
+ * A board in five lines, for a margin.
+ *
+ * The rank wears the rarity ladder the same way the full table does, so a
+ * colour means the same thing wherever it turns up on the site.
+ */
+const MiniBoard = ({ title, metric, format }) => {
+  const [entries, setEntries] = useState(null);
+
+  useEffect(() => {
+    let live = true;
+    api.leaderboard(metric, { limit: 5 }).then(
+      (board) => live && setEntries(board.entries ?? []),
+      () => live && setEntries([])
+    );
+    return () => {
+      live = false;
+    };
+  }, [metric]);
+
+  if (!entries) return <Box title={title} />;
+  if (!entries.length) {
+    return (
+      <Box title={title}>
+        <p className="wait">Nobody yet.</p>
+      </Box>
+    );
+  }
+
+  return (
+    <Box title={title} flush>
+      <table className="table">
+        <tbody>
+          {entries.map((entry) => (
+            <tr key={entry.account_id}>
+              <td className="table__rank">{entry.rank}</td>
+              <td>{entry.name || "unnamed"}</td>
+              <td className="table__num">{format(entry.value)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </Box>
+  );
+};
+
+const asTime = (ms) => {
+  const seconds = Math.round(ms / 1000);
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+};
+const asCount = (value) => whole.format(value);
+
 const Menu = () => (
   <Box title="Navigation" flush>
     <ul className="menu">
       <li>
         <NavLink to="/" end>
-          Front page
+          News
         </NavLink>
       </li>
       <li>
-        <NavLink to="/leaderboard">Leaderboards</NavLink>
+        <NavLink to="/leaderboard">Hall of Deeds</NavLink>
       </li>
       <li>
         <NavLink to="/trade">Trade</NavLink>
@@ -203,8 +316,19 @@ export const Page = ({ where, children }) => (
       <div className="column">
         <AccountBox />
         <Menu />
+        <ServerBox />
       </div>
       <div className="column">{children}</div>
+      {/*
+        The right rail is the standings, always on screen. It is the reason
+        somebody opens a server's site on a weekday, so it does not wait behind
+        a link — and it is the first thing to fold away when the window is too
+        narrow to carry three columns.
+      */}
+      <div className="column column--aside">
+        <MiniBoard title="Fastest Clears" metric="speedrun" format={asTime} />
+        <MiniBoard title="Most Experience" metric="experience" format={asCount} />
+      </div>
     </div>
   </>
 );

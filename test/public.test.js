@@ -137,3 +137,60 @@ test("a game server that cannot be reached is not the caller's fault", async () 
     503
   );
 });
+
+/* --------------------------------------------------------------- status - */
+
+/**
+ * The margin numbers, and what happens when the game is not answering.
+ *
+ * A front page that fails because the game server is restarting would be a site
+ * that goes down whenever the thing it describes does. The boards live on this
+ * side of the wall and have plenty to say without it, so the margin goes quiet
+ * and the page stands.
+ */
+test("status passes the game server's counts through", async () => {
+  const statusApp = await buildApp({
+    game: {
+      readStatus: async () => ({
+        online: 7,
+        in_dungeon: 4,
+        runs_today: 318,
+        uptime_seconds: 536_400,
+      }),
+    },
+    mailer: {},
+    rateLimited: false,
+  });
+  await statusApp.ready();
+
+  const response = await statusApp.inject({ method: "GET", url: "/api/status" });
+
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(response.json(), {
+    online: 7,
+    in_dungeon: 4,
+    runs_today: 318,
+    uptime_seconds: 536_400,
+  });
+  await statusApp.close();
+});
+
+test("a game server that is not answering leaves the page standing", async () => {
+  const { GameServerError } = await import("../src/game.js");
+  const downApp = await buildApp({
+    game: {
+      readStatus: async () => {
+        throw new GameServerError(502, "connect ECONNREFUSED");
+      },
+    },
+    mailer: {},
+    rateLimited: false,
+  });
+  await downApp.ready();
+
+  const response = await downApp.inject({ method: "GET", url: "/api/status" });
+
+  assert.equal(response.statusCode, 200, "the site is up even when the game is not");
+  assert.deepEqual(response.json(), { reachable: false });
+  await downApp.close();
+});

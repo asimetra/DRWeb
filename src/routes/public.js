@@ -49,6 +49,26 @@ export const publicRoutes = async (app) => {
   }));
 
   /**
+   * `GET /api/status` — who is on and what has happened today.
+   *
+   * Open, and a count rather than a roster: it is the number in the margin of
+   * every page, and a visitor deciding whether to download the client is
+   * exactly who it is for.
+   *
+   * A game server that is down is not an error here. The site has plenty to
+   * say without it — the boards are stored on this side of the wall — so the
+   * margin goes quiet rather than the page failing.
+   */
+  app.get("/api/status", async () => {
+    try {
+      return await app.game.readStatus();
+    } catch (problem) {
+      if (problem instanceof GameServerError) return { reachable: false };
+      throw problem;
+    }
+  });
+
+  /**
    * `GET /api/leaderboards/:metric` — open, because a leaderboard nobody can
    * read without an account is a leaderboard doing half its job.
    *

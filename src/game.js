@@ -73,6 +73,9 @@ export const revokeTokens = (accountId) =>
  * written together — and splitting it would be inventing a way for a weapon
  * to end up on neither account.
  */
+/** How the server is doing, for the margins of every page. */
+export const readStatus = () => call("GET", "/internal/v1/status");
+
 export const settleTrade = (parties) => call("POST", "/internal/v1/trades", { parties });
 
 /**
