@@ -66,6 +66,7 @@ export const Account = () => {
   const [problem, setProblem] = useState("");
   const [changing, setChanging] = useState(false);
   const [server, setServer] = useState(null);
+  const [resent, setResent] = useState(false);
 
   useEffect(() => {
     api.server().then(setServer, () => undefined);
@@ -149,9 +150,31 @@ export const Account = () => {
             </Buttons>
           </>
         ) : (
-          <Notice>
-            Confirm your email address and a game account will be created.
-          </Notice>
+          <>
+            <Notice>
+              Confirm your email address and a game account will be created.
+            </Notice>
+            {/*
+              The link is the only way past this screen, and the only place to
+              ask for another one was the page shown immediately after signing
+              up — so anybody whose first message went astray, or who simply
+              came back the next day, had nowhere to go.
+            */}
+            <Buttons>
+              <Button
+                type="button"
+                disabled={resent}
+                onClick={() =>
+                  act(async () => {
+                    await api.resendVerification(user.email);
+                    setResent(true);
+                  }, `Another link is on its way to ${user.email}.`)
+                }
+              >
+                {resent ? "Link sent" : "Send another link"}
+              </Button>
+            </Buttons>
+          </>
         )}
       </Box>
 
