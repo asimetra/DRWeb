@@ -194,14 +194,8 @@ const CharacterBox = () => {
   return (
     <Box title={player.name || "Character"} more={hero ? `level ${hero.level}` : null}>
       {hero ? (
-        <div className="who">
-          <span
-            className="portrait portrait--me"
-            title={hero.name}
-            style={hero.icon ? { backgroundImage: `url(${GAME_ICONS}${hero.icon}.png)` } : undefined}
-          >
-            {hero.name.split(" ").map((word) => word[0]).join("")}
-          </span>
+        <div className="who who--me">
+          <Portrait hero={hero} mine />
           <span>
             <span className="who__hero">{hero.name}</span>
             <span className="who__level">Level {hero.level}</span>
@@ -227,7 +221,23 @@ const CharacterBox = () => {
  * The client's avatar icons, served by the game server rather than bundled
  * here — the same route and the same reasoning as the background art.
  */
-const GAME_ICONS = "/content/Resources/Art2D/Icons/Avatars/";
+export const GAME_ICONS = "/content/Resources/Art2D/Icons/Avatars/";
+
+/**
+ * A hero's picture, with its initials behind it.
+ *
+ * The frame is drawn either way, so an icon the game server is not serving
+ * leaves a gap in the row rather than a hole in the layout.
+ */
+export const Portrait = ({ hero, mine = false }) => (
+  <span
+    className={mine ? "portrait portrait--me" : "portrait"}
+    title={hero?.name}
+    style={hero?.icon ? { backgroundImage: `url(${GAME_ICONS}${hero.icon}.png)` } : undefined}
+  >
+    {hero ? hero.name.split(" ").map((word) => word[0]).join("") : ""}
+  </span>
+);
 
 /*
  * One poll for the whole page.

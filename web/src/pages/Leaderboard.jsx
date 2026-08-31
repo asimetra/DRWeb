@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { api, ApiError } from "../api.js";
-import { Box, Notice, Page } from "../components/Chrome.jsx";
+import { Box, Notice, Page, Portrait } from "../components/Chrome.jsx";
 
 const whole = new Intl.NumberFormat("en-GB");
 
@@ -92,9 +92,21 @@ export const Standings = ({ metric, limit = 20, scope = {}, onCount }) => {
           {board.entries.map((entry) => (
             <tr key={entry.account_id}>
               <td className="table__rank">{entry.rank}</td>
+              {/*
+                Who set it, and what they set it on. The hero is the game
+                server's answer, carried on the standing — a time belongs to
+                the hero who ran it, whatever that player is playing now.
+              */}
               <td>
-                <span className="name">{entry.name || "unnamed"}</span>{" "}
-                <span className="table__quiet">{entry.account_id}</span>
+                <span className="who">
+                  <Portrait hero={entry.hero} />
+                  <span>
+                    <span className="name">{entry.name || "unnamed"}</span>
+                    <span className="who__hero who__hero--row">
+                      {entry.hero ? entry.hero.name : `account ${entry.account_id}`}
+                    </span>
+                  </span>
+                </span>
               </td>
               {/*
                 A title is what somebody has beaten, not where they placed: a
