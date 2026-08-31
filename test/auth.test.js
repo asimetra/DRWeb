@@ -483,6 +483,32 @@ test("the character summary is passed through", async () => {
 });
 
 /**
+ * And it is asked about the right player.
+ *
+ * The guard reads `account_id`, which is the column, and the handler read
+ * `accountId`, which is undefined on that same object. `Number(undefined)` is
+ * NaN, the game server refused the path, and its refusal arrived here as
+ * `reachable: false` — so the panel reported the game server as down while it
+ * was answering everything else perfectly. The test above could not see it,
+ * because the stand-in took whatever it was handed without looking at it.
+ */
+test("the character summary is asked for under the signed-in account", async () => {
+  let askedFor = "never called";
+  fakeGame.readSummary = async (accountId) => {
+    askedFor = accountId;
+    return { account_id: accountId, name: "Grimwald", heroes: 1, clears: 0 };
+  };
+
+  const { visitor } = await confirmed();
+  const mine = (await visitor.get("/api/me")).json().user;
+  const response = await visitor.get("/api/me/character");
+
+  assert.equal(response.statusCode, 200);
+  assert.ok(Number.isFinite(Number(askedFor)), `asked the game server for ${askedFor}`);
+  assert.equal(Number(askedFor), Number(mine.accountId), "and for the wrong account");
+});
+
+/**
  * And a game server that is not answering leaves the panel quiet rather than
  * failing the page: somebody signed in while the game restarts should still
  * reach their account.

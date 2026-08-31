@@ -490,7 +490,9 @@ export const authRoutes = async (app) => {
    */
   app.get("/api/me/character", { onRequest: requireAccount }, async (request) => {
     try {
-      return await app.game.readSummary(request.user.accountId);
+      // `account_id` is the column, and the guard above reads the same one.
+      // `accountId` is undefined here, and undefined became NaN in the path.
+      return await app.game.readSummary(request.user.account_id);
     } catch (problem) {
       if (problem instanceof GameServerError) return { reachable: false };
       throw problem;
