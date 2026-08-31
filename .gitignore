@@ -1,0 +1,9 @@
+node_modules/
+*.log
+
+# Deployment-local: the session secret, the internal-API token and the
+# database URL all end up here, and none of them belong in the tree.
+.env
+
+# Built front end.
+/public/

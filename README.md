@@ -1,0 +1,109 @@
+# Open Dungeon Web
+
+The web front end for an [Open Dungeon Server](https://github.com/asimetra/DRServer)
+deployment: signing up, signing in, and handing a player the credential their
+game client actually uses.
+
+Server code only. It is useless on its own — it needs a game server to talk to.
+
+## The division
+
+The game server owns the account tables and is the only thing that writes them.
+That is not tidiness. It keeps the accounts that are in play as live objects in
+memory and orders its writers with locks that are local to that process, so a
+second process writing the same rows sits outside both: a trade settled here
+while its owner was in a dungeon would be undone by the save at the end of
+their run.
+
+So this application owns its own tables — who signed up, with which address,
+holding which session — in a `web` schema in the same database, and asks the
+game server for everything else over its internal API.
+
+```
+  browser ──▶ this  ──▶ web schema      (users, sessions)
+                 │
+                 └─▶ game server ──▶ public schema   (accounts, items, …)
+                     internal API      ← the only writer
+```
+
+Reading is a different matter. A profile page or a leaderboard can query the
+account tables directly and get a consistent snapshot; it is only writing that
+has to go through the door.
+
+## Requirements
+
+- Node.js 20+
+- a running game server with its internal API enabled
+- Postgres, sharing the game's database
+
+## Run
+
+The game server needs to be started with an internal token, and this one needs
+the same token:
+
+```bash
+# in the game server's checkout
+ODS_INTERNAL_TOKEN=$(openssl rand -hex 32) npm start
+```
+
+```bash
+# here
+ODW_SESSION_SECRET=$(openssl rand -hex 32) \
+ODW_GAME_INTERNAL_TOKEN=<the same token> \
+npm start
+```
+
+Apply `db/schema.sql` once against the game's database before the first run.
+
+For a look at it without a database, `ODW_STORAGE=memory` keeps everything in
+the process and loses it on restart. That is what the tests use, and it is not
+the default for the obvious reason.
+
+## Configuration
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `ODW_HOST` / `ODW_PORT` | `127.0.0.1` / `3000` | Bind address |
+| `ODW_STORAGE` | `postgres` | `postgres` or `memory` |
+| `ODW_DATABASE_URL` | the game's dev database | Where the `web` schema lives |
+| `ODW_SESSION_SECRET` | — | Signs the session cookie; at least 32 characters |
+| `ODW_SESSION_TTL_MS` | 14 days | How long a signed-in session lasts |
+| `ODW_COOKIE_SECURE` | on under `NODE_ENV=production` | Refuse to send the cookie over plain HTTP |
+| `ODW_GAME_INTERNAL_URL` | `http://127.0.0.1:8081` | The game server's internal API |
+| `ODW_GAME_INTERNAL_TOKEN` | — | Must match the game server's `ODS_INTERNAL_TOKEN` |
+
+The three without defaults are checked at startup, so a misconfigured
+deployment fails on the command that started it rather than on somebody's first
+sign-up.
+
+## API
+
+Every state-changing call carries a CSRF token from `GET /api/csrf` as
+`X-CSRF-Token`. Signing in regenerates the session, which discards the token
+with it — fetch a fresh one afterwards.
+
+| Route | Does |
+|---|---|
+| `GET /api/csrf` | A CSRF token, and the session that carries it |
+| `POST /api/register` | Creates a user and a game account, signs in, returns the client token **once** |
+| `POST /api/login` | Signs in |
+| `POST /api/logout` | Ends the session |
+| `GET /api/me` | Who you are signed in as |
+| `POST /api/game-token` | A replacement client token |
+| `DELETE /api/game-token` | Invalidates every client token for this account |
+
+## Tests
+
+```bash
+npm test
+```
+
+They run against the in-memory backend and a stand-in for the game server: what
+is being tested is this application's half of registering — that a user row and
+a game account are created together or not at all — and standing up a real
+server to prove it would be testing the other repository.
+
+## License
+
+GPL-3.0-or-later. See the game server's `NOTICE.md` for the redistribution
+boundary that project keeps; this one holds no game material at all.
