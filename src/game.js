@@ -74,3 +74,15 @@ export const revokeTokens = (accountId) =>
  * to end up on neither account.
  */
 export const settleTrade = (parties) => call("POST", "/internal/v1/trades", { parties });
+
+/**
+ * A standings table. `scope` carries the node, hero and party size that the
+ * speedrun board needs and the player-scoped boards ignore.
+ */
+export const readBoard = (metric, scope = {}) => {
+  const query = new URLSearchParams(
+    Object.entries(scope).filter(([, value]) => value !== undefined && value !== null)
+  );
+  const suffix = query.toString();
+  return call("GET", `/internal/v1/leaderboards/${encodeURIComponent(metric)}${suffix ? `?${suffix}` : ""}`);
+};

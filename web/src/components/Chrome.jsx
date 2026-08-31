@@ -1,16 +1,59 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { api } from "../api.js";
+import { useViewer } from "../viewer.jsx";
 
 /**
- * A bar with the site's name at one end and the page's at the other. There is
- * no wordmark and no crest: the name is a label, the way it is on a site whose
- * job is account admin rather than an announcement.
+ * A bar with the site's name at one end and, at the other, either where you
+ * are or the way in.
+ *
+ * The links are the point. Most of this site reads without an account, so the
+ * header has to offer a way to sign in rather than assume everybody already
+ * has — and it must not flash "Log in" at somebody who is signed in while it
+ * finds out, which is what `ready` is for.
  */
-export const TopBar = ({ where }) => (
-  <div className="topbar">
-    <p className="topbar__name">Open Dungeon</p>
-    <span className="topbar__where">{where}</span>
-  </div>
-);
+export const TopBar = ({ where }) => {
+  const navigate = useNavigate();
+  const { viewer, ready, refresh } = useViewer();
+
+  const signOut = async () => {
+    await api.logout();
+    await refresh();
+    navigate("/");
+  };
+
+  return (
+    <div className="topbar">
+      <Link className="topbar__name" to="/">
+        Open Dungeon
+      </Link>
+      <span className="topbar__where">
+        {where ? <span className="topbar__page">{where}</span> : null}
+        <Link className="topbar__link" to="/leaderboard">
+          Leaderboards
+        </Link>
+        {!ready ? null : viewer ? (
+          <>
+            <Link className="topbar__link" to="/account">
+              Account
+            </Link>
+            <button className="topbar__link" type="button" onClick={signOut}>
+              Log out
+            </button>
+          </>
+        ) : (
+          <>
+            <Link className="topbar__link" to="/login">
+              Log in
+            </Link>
+            <Link className="topbar__link" to="/register">
+              Create account
+            </Link>
+          </>
+        )}
+      </span>
+    </div>
+  );
+};
 
 export const Box = ({ title, lede, children }) => (
   <section className="box">

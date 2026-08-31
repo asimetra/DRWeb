@@ -92,11 +92,34 @@ body {
   font-weight: bold;
   letter-spacing: 0.06em;
   color: var(--text-on-bar);
+  text-decoration: none;
 }
 
 .topbar__where {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
   font-size: 11px;
   color: #b9a884;
+}
+
+.topbar__page {
+  color: #9a8a68;
+}
+
+.topbar__link {
+  font-family: var(--ui);
+  font-size: 11px;
+  color: #e0cfa8;
+  text-decoration: underline;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+.topbar__link:hover {
+  color: #fff;
 }
 
 /* ------------------------------------------------------------------ box - */
@@ -421,5 +444,105 @@ body {
 .gold-field span {
   font-size: 11px;
   font-weight: bold;
+  color: var(--text-dim);
+}
+
+/* ----------------------------------------------------------------- home - */
+
+/*
+ * The steps somebody actually follows to get in, numbered because they are a
+ * sequence: the token does not exist until the address is confirmed, and the
+ * client cannot start until the token is in its file.
+ */
+.steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+}
+
+.steps li {
+  position: relative;
+  counter-increment: step;
+  padding: 6px 0 6px 30px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.steps li:last-child {
+  border-bottom: none;
+}
+
+.steps li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: 6px;
+  width: 19px;
+  height: 19px;
+  line-height: 19px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: bold;
+  color: var(--text-on-bar);
+  background: var(--bar);
+  border: 1px solid var(--rule-dark);
+}
+
+.address {
+  display: block;
+  padding: 6px 8px;
+  margin: 4px 0 10px;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  word-break: break-all;
+  background: #fbf4e6;
+  border: 1px solid var(--rule);
+  box-shadow: inset 1px 1px 2px rgba(92, 74, 46, 0.28);
+}
+
+/* ------------------------------------------------------------- boards - */
+
+.board {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.board th {
+  padding: 4px 8px;
+  text-align: left;
+  font-size: 11px;
+  color: var(--text-on-bar);
+  background: var(--bar);
+  border-bottom: 1px solid var(--rule-dark);
+}
+
+.board td {
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.board tbody tr:nth-child(odd) td {
+  background: var(--page-alt);
+}
+
+.board tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.board__rank {
+  width: 2.5em;
+  text-align: right;
+  color: var(--text-dim);
+}
+
+.board__value {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.board__who {
+  font-family: var(--mono);
+  font-size: 11px;
   color: var(--text-dim);
 }

@@ -2,9 +2,11 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api, ApiError } from "../api.js";
 import { Box, Button, Buttons, Field, Footnote, Notice, Quiet, TopBar } from "../components/Chrome.jsx";
+import { useViewer } from "../viewer.jsx";
 
 export const Login = () => {
   const navigate = useNavigate();
+  const { refresh } = useViewer();
   const [form, setForm] = useState({ email: "", password: "" });
   const [problem, setProblem] = useState("");
   const [busy, setBusy] = useState(false);
@@ -17,6 +19,7 @@ export const Login = () => {
     setBusy(true);
     try {
       await api.login(form);
+      await refresh();
       navigate("/account");
     } catch (failure) {
       setProblem(failure instanceof ApiError ? failure.message : "Something went wrong.");

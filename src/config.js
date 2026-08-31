@@ -68,6 +68,13 @@ export const loadConfig = (environment = process.env) => ({
    * runs in development without a mail server. It is not a fallback anybody
    * should reach in production, so startup says so plainly.
    */
+  /**
+   * What to tell a visitor to put in their client configuration. Display only
+   * — this application never connects to it — and separate from
+   * `gameInternalUrl`, which is a private address a player must never see.
+   */
+  gameAddress: environment.ODW_GAME_ADDRESS ?? "http://127.0.0.1:8080",
+
   smtpUrl: environment.ODW_SMTP_URL ?? "",
   mailFrom: environment.ODW_MAIL_FROM ?? "no-reply@localhost",
 });

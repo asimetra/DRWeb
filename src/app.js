@@ -14,6 +14,7 @@ import * as storage from "./storage/index.js";
 import * as gameServer from "./game.js";
 import { createMailer } from "./mail.js";
 import { authRoutes } from "./routes/auth.js";
+import { publicRoutes } from "./routes/public.js";
 import { tradeRoutes } from "./routes/trade.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -114,6 +115,7 @@ export const buildApp = async ({
   // Before the routes that declare `websocket: true`.
   await app.register(websocket);
 
+  await app.register(publicRoutes);
   await app.register(authRoutes);
   await app.register(tradeRoutes);
 

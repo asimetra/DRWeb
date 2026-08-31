@@ -68,6 +68,13 @@ export const api = {
   changePassword: (body) => call("POST", "/api/password", body),
   newGameToken: () => call("POST", "/api/game-token"),
 
+  server: () => call("GET", "/api/server"),
+  leaderboard: (metric, scope = {}) => {
+    const query = new URLSearchParams(
+      Object.entries(scope).filter(([, value]) => value !== undefined && value !== null)
+    );
+    return call("GET", `/api/leaderboards/${metric}?${query}`);
+  },
   inventory: () => call("GET", "/api/inventory"),
   trade: (id) => call("GET", `/api/trades/${id}`),
   startTrade: (partnerAccountId) => call("POST", "/api/trades", { partnerAccountId }),

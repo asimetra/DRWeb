@@ -93,6 +93,7 @@ what they do and nothing narrates.
 | `ODW_GAME_INTERNAL_TOKEN` | — | Must match the game server's `ODS_INTERNAL_TOKEN` |
 | `ODW_PUBLIC_URL` | `http://127.0.0.1:3000` | Where confirmation links point |
 | `ODW_LINK_TTL_MS` | 24 hours | How long a mailed link lasts — confirmation and reset alike |
+| `ODW_GAME_ADDRESS` | `http://127.0.0.1:8080` | Shown to players for their client configuration |
 | `ODW_SMTP_URL` | — | SMTP connection string; unset logs the link instead of sending |
 | `ODW_MAIL_FROM` | `no-reply@localhost` | Sender address |
 
@@ -108,6 +109,8 @@ with it — fetch a fresh one afterwards.
 
 | Route | Does |
 |---|---|
+| `GET /api/server` | The address a player puts in their client. **Open** |
+| `GET /api/leaderboards/:metric` | Standings, cached 15s. **Open** |
 | `GET /api/csrf` | A CSRF token, and the session that carries it |
 | `POST /api/register` | Creates a user and mails a confirmation link. No game account yet |
 | `POST /api/verify` | Confirms the address, creates the game account, returns the client token **once** |
@@ -127,6 +130,25 @@ with it — fetch a fresh one afterwards.
 | `GET /api/me` | Who you are signed in as |
 | `POST /api/game-token` | A replacement client token |
 | `DELETE /api/game-token` | Invalidates every client token for this account |
+
+## What is public
+
+The front page, the leaderboards and the connection details need no account. A
+server people are being invited to play on has to be able to say what it is and
+who is doing well on it before it asks them for an address and a password, and
+until now `/` was a redirect to a login form.
+
+The boards live behind the game server's internal API, which a browser cannot
+reach and must not be able to — the credential that opens it answers for every
+account. So they are proxied, and because that proxy is the one route anybody
+on the internet can call without an account, it holds each board for fifteen
+seconds. A board changes when somebody finishes a run; that much staleness is
+invisible next to it.
+
+The scope parameters (`node`, `hero`, `party`, `limit`) are passed through
+rather than interpreted, except for the limit, which is clamped. Which boards
+exist and what they need is the game server's business, and a second opinion
+here would be one more thing to keep in step.
 
 ## Signing up
 

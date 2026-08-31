@@ -2,10 +2,12 @@ import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { api, ApiError } from "../api.js";
 import { Box, Button, Buttons, Field, Footnote, Notice, Quiet, TopBar } from "../components/Chrome.jsx";
+import { useViewer } from "../viewer.jsx";
 import { GameToken } from "../components/GameToken.jsx";
 
 export const Reset = () => {
   const [params] = useSearchParams();
+  const { refresh } = useViewer();
   const [password, setPassword] = useState("");
   const [problem, setProblem] = useState("");
   const [busy, setBusy] = useState(false);
@@ -17,6 +19,7 @@ export const Reset = () => {
     setBusy(true);
     try {
       setDone(await api.resetPassword({ token: params.get("token"), password }));
+      await refresh();
     } catch (failure) {
       setProblem(failure instanceof ApiError ? failure.message : "Something went wrong.");
     } finally {

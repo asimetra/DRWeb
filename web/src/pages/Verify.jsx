@@ -2,10 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { api, ApiError } from "../api.js";
 import { Box, Footnote, Notice, Quiet, TopBar } from "../components/Chrome.jsx";
+import { useViewer } from "../viewer.jsx";
 import { GameToken } from "../components/GameToken.jsx";
 
 export const Verify = () => {
   const [params] = useSearchParams();
+  const { refresh } = useViewer();
   const [state, setState] = useState({ status: "working" });
 
   /**
@@ -26,14 +28,18 @@ export const Verify = () => {
     }
 
     api.verify(token).then(
-      (result) => setState({ status: "done", ...result }),
+      (result) => {
+        setState({ status: "done", ...result });
+        // Confirming signs you in, so the header has to hear about it.
+        refresh();
+      },
       (failure) =>
         setState({
           status: "failed",
           problem: failure instanceof ApiError ? failure.message : "Something went wrong.",
         })
     );
-  }, [params]);
+  }, [params, refresh]);
 
   if (state.status === "working") {
     return (

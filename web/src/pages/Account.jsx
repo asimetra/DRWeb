@@ -109,17 +109,6 @@ export const Account = () => {
         </Rows>
         <Footnote>
           <Quiet to="/trade">Trade with another player</Quiet>
-          {" · "}
-          <button
-            className="link"
-            type="button"
-            onClick={async () => {
-              await api.logout();
-              navigate("/login");
-            }}
-          >
-            Log out
-          </button>
         </Footnote>
       </Box>
 
