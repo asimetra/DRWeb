@@ -9,10 +9,11 @@
     "node": ">=20"
   },
   "scripts": {
-    "start": "node src/index.js",
+    "start": "node --env-file-if-exists=.env src/index.js",
     "test": "node --test --test-concurrency=1",
     "build": "vite build",
-    "dev:web": "vite"
+    "dev:web": "vite",
+    "serve": "npm run build && npm start"
   },
   "dependencies": {
     "@fastify/cookie": "^11.1.2",

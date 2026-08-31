@@ -284,3 +284,50 @@ a number in it would break mid-word into the fallback.
 A public deployment should satisfy itself about both licences first. The font's
 `fsType` is 0, its own "embedding unrestricted" flag, but that is a technical
 signal and not a licence.
+
+## Running it
+
+Configuration is read from `.env` when there is one — `npm start` passes
+`--env-file-if-exists`, so a checkout without the file still starts and the
+tests need nothing at all. Copy `.env.example` and fill in the two values that
+have no default.
+
+```
+cp .env.example .env
+```
+
+`ODW_SESSION_SECRET` is this site's own, and any 32 characters will do.
+`ODW_GAME_INTERNAL_TOKEN` must be **identical** to the game server's
+`ODS_INTERNAL_TOKEN`, because it is the one secret the two processes share. It
+is not the game's token secret, which signs player tokens and never leaves that
+process.
+
+Then, in one terminal each:
+
+```
+cd ../Dungeon-Rampage-Server && ODS_INTERNAL_TOKEN=<the same value> npm start
+npm run serve
+```
+
+`npm run serve` builds the front end and starts the server, which serves both
+the site and the API from one process. Two processes are only for working on
+the front end, where `npm run dev:web` gives hot reload and proxies `/api`
+through to `npm start` on port 3000.
+
+To check the pair is talking:
+
+```
+curl -H "X-Internal-Token: <the shared value>" http://127.0.0.1:8081/internal/v1/status
+```
+
+A 200 and some counts means the chain is up. A 401 means the two values differ.
+Connection refused means the game server was started without the variable and
+its internal API is switched off.
+
+### Signing up without a mail server
+
+With no SMTP configured the confirmation link is written to the log rather than
+posted, so registering works on a laptop: sign up, copy the link out of the
+game server's terminal, open it. Verification is not skipped and there is no
+switch to skip it — a shortcut there would be one to unpick later, and the flow
+already works without one.
