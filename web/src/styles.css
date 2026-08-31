@@ -446,18 +446,93 @@ a:hover { color: var(--link-hot); }
  * scans a market for; the modifiers are what they stop on. Colouring both
  * would leave the table with nothing to rest on.
  */
-.weapon { display: block; }
-.weapon__mods { display: block; margin-top: 0.15rem; }
-.weapon__mod {
+.weapon { position: relative; display: inline-block; }
+.weapon__count {
   display: block;
+  font-size: 0.72rem;
+  color: var(--text-faint);
+  margin-top: 0.1rem;
+}
+
+/*
+ * The whole item, kept out of the row until somebody stops on it.
+ *
+ * Fifty listings and a dozen lines each will not share a table, so the row
+ * carries what a market is scanned by and this carries what it is decided by.
+ * Shown on hover and on keyboard focus both: a card only a mouse can open is
+ * a card half the people reading cannot.
+ */
+.weapon__card {
+  position: absolute;
+  z-index: 20;
+  top: 100%;
+  left: 0;
+  width: 19rem;
+  padding: 0.7rem 0.85rem;
+  background: #0d0b08;
+  border: 1px solid var(--frame-dark);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.6);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 90ms ease-out;
+  pointer-events: none;
+}
+.weapon:hover .weapon__card,
+.weapon:focus-within .weapon__card { opacity: 1; visibility: visible; }
+
+.item__name { font-weight: 600; font-size: 0.95rem; }
+.item__type {
+  font-size: 0.74rem;
+  color: var(--text-faint);
+  text-transform: capitalize;
+  margin-bottom: 0.5rem;
+}
+
+/*
+ * Stat, then value, one to a line. A weapon is compared against another
+ * weapon down a column, never along a sentence.
+ */
+.item__stats {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.1rem 0.8rem;
+  margin: 0 0 0.55rem;
   font-size: 0.78rem;
-  line-height: 1.35;
+}
+.item__stats dt { color: var(--text-faint); }
+.item__stats dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+
+/* The two attacks: the weapon itself, not what was rolled onto it. */
+.item__attacks {
+  border-top: 1px dotted var(--rule);
+  padding-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.item__attack + .item__attack { margin-top: 0.45rem; }
+.item__attack-name {
+  font-size: 0.78rem;
+  color: var(--text);
+  text-transform: capitalize;
+}
+.item__mana { font-size: 0.72rem; color: var(--r-uncommon); }
+.item__attack p {
+  margin: 0.1rem 0 0;
+  font-size: 0.74rem;
+  line-height: 1.4;
   color: var(--text-dim);
 }
-.weapon__mod::before { content: "· "; opacity: 0.55; }
-/* Set apart, as the game sets it apart — see describeListings. */
-.weapon__mod--legendary { color: var(--r-legendary); }
-.weapon__mod--legendary::before { content: "★ "; opacity: 0.8; }
+
+/* And what was rolled onto it, last, because it is what varies. */
+.item__mods { border-top: 1px dotted var(--rule); padding-top: 0.5rem; }
+.item__mod {
+  font-size: 0.76rem;
+  line-height: 1.4;
+  color: var(--r-uncommon);
+}
+.item__mod + .item__mod { margin-top: 0.2rem; }
+/* Apart, as the game keeps it apart — see describeListings. */
+.item__mod--legendary { color: var(--r-legendary); }
+.item__mod--legendary::before { content: "★ "; opacity: 0.85; }
 
 /** Two-column facts. The same stripes, so a table and a fact list agree. */
 .facts { border-collapse: collapse; width: 100%; font-size: 0.83rem; }

@@ -12,17 +12,113 @@ const whole = new Intl.NumberFormat("en-GB");
 const TIERS = ["common", "uncommon", "rare", "legendary"];
 const tierOf = (rarity) => TIERS[Math.max(0, Math.min(3, Number(rarity ?? 0)))] ?? "common";
 
+const typeOf = (mastertype) =>
+  String(mastertype ?? "")
+    .replace(/_TYPE$/, "")
+    .replace(/_/g, " ")
+    .toLowerCase();
+
 /**
- * What a weapon is: the line that names it, and under it the lines somebody
- * actually buys it for.
+ * The whole item, read downwards: what it is, what it is worth swinging, and
+ * what has been rolled onto it.
  *
- * Every word is the game server's answer. A modifier is stored as a number and
- * this side holds no game data to turn 70211 into "Chargey", so a listing
- * arrives already carrying the name and what it does — see `describeListings`.
- * An item with none has nothing underneath, which is most of them.
+ * Stacked rather than run together on one line because that is how it is read
+ * — nobody compares two weapons by scanning a sentence — and the order is the
+ * order somebody decides in: is this my kind of weapon, is it strong enough,
+ * can I use it, what does it do.
+ *
+ * Every word is the game server's answer. A modifier is a number in the row
+ * and this side holds no game data to turn 70211 into "Chargey", which is the
+ * arrangement the pair is built on. See `describeListings`.
+ */
+const Detail = ({ listing }) => {
+  const modifiers = listing.modifiers ?? [];
+  const weapon = listing.weapon;
+  return (
+    <div className="item">
+      <div className={`item__name title--${tierOf(listing.rarity)}`}>
+        {listing.name ?? `item ${listing.item_id}`}
+      </div>
+      {listing.mastertype ? (
+        <div className="item__type">
+          {typeOf(listing.mastertype)}
+          {weapon?.classType ? ` · ${weapon.classType.toLowerCase()}` : ""}
+        </div>
+      ) : null}
+
+      <dl className="item__stats">
+        {listing.power ? (
+          <>
+            <dt>Power</dt>
+            <dd>{whole.format(listing.power)}</dd>
+          </>
+        ) : null}
+        {weapon?.speed ? (
+          <>
+            <dt>Speed</dt>
+            <dd>{weapon.speed.toLowerCase()}</dd>
+          </>
+        ) : null}
+        {listing.requiredlevel ? (
+          <>
+            <dt>Level</dt>
+            <dd>{listing.requiredlevel}</dd>
+          </>
+        ) : null}
+      </dl>
+
+      {/* Its two attacks, which are the weapon rather than the roll: every
+          Hand Axe has these and no two weapon types share them. */}
+      {weapon?.tap?.title || weapon?.hold?.title ? (
+        <div className="item__attacks">
+          {weapon.tap?.title ? (
+            <div className="item__attack">
+              <span className="item__attack-name">{weapon.tap.title}</span>
+              {weapon.tap.description ? <p>{weapon.tap.description}</p> : null}
+            </div>
+          ) : null}
+          {weapon.hold?.title ? (
+            <div className="item__attack">
+              <span className="item__attack-name">{weapon.hold.title}</span>
+              {weapon.hold.manaCost ? (
+                <span className="item__mana"> · {weapon.hold.manaCost} mana</span>
+              ) : null}
+              {weapon.hold.description ? <p>{weapon.hold.description}</p> : null}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      {modifiers.length || listing.legendary ? (
+        <div className="item__mods">
+          {modifiers.map((modifier) => (
+            <div className="item__mod" key={modifier.id}>
+              {modifier.description ?? modifier.name}
+            </div>
+          ))}
+          {/* Apart, the way the game keeps it apart: only the top rarity
+              carries a third, and it is the line that weapon is bought for. */}
+          {listing.legendary ? (
+            <div className="item__mod item__mod--legendary">
+              {listing.legendary.description ?? listing.legendary.name}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+};
+
+/**
+ * The row, and the whole item behind it.
+ *
+ * A market is fifty rows and an item is a dozen lines, so the table cannot
+ * hold both: the row carries what a list is scanned by — the name, its rarity,
+ * and the two numbers that rule a weapon in or out — and the rest waits until
+ * somebody stops on it.
  */
 const Weapon = ({ listing }) => {
-  const modifiers = listing.modifiers ?? [];
+  const modifiers = (listing.modifiers ?? []).length + (listing.legendary ? 1 : 0);
   return (
     <span className="weapon">
       <span className={`title title--${tierOf(listing.rarity)}`}>
@@ -32,23 +128,14 @@ const Weapon = ({ listing }) => {
       {listing.requiredlevel ? (
         <span className="table__quiet"> · level {listing.requiredlevel}</span>
       ) : null}
-
-      {modifiers.length || listing.legendary ? (
-        <span className="weapon__mods">
-          {modifiers.map((modifier) => (
-            <span className="weapon__mod" key={modifier.id}>
-              {modifier.description ?? modifier.name}
-            </span>
-          ))}
-          {/* Set apart the way the game sets it apart: the third one, which
-              only the top rarity carries. */}
-          {listing.legendary ? (
-            <span className="weapon__mod weapon__mod--legendary">
-              {listing.legendary.description ?? listing.legendary.name}
-            </span>
-          ) : null}
+      {modifiers ? (
+        <span className="weapon__count">
+          {modifiers === 1 ? "1 modifier" : `${modifiers} modifiers`}
         </span>
       ) : null}
+      <span className="weapon__card" role="tooltip">
+        <Detail listing={listing} />
+      </span>
     </span>
   );
 };
