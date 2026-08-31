@@ -20,3 +20,6 @@ node_modules/
 #
 # See README, "The game's own art".
 /web/public/
+
+# Editor and agent scratch: local paths, not the application.
+.claude/
