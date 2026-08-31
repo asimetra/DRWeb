@@ -59,6 +59,26 @@ For a look at it without a database, `ODW_STORAGE=memory` keeps everything in
 the process and loses it on restart. That is what the tests use, and it is not
 the default for the obvious reason.
 
+## The front end
+
+React, built by Vite into `public/`, which the server serves when it is there
+and skips when it is not — a checkout that has never run the build still starts
+and still answers the API.
+
+```bash
+npm run build     # into public/
+npm run dev:web   # Vite on 5173, proxying /api to the server on 3000
+```
+
+Anything that is not `/api/…` and not a file on disk is answered with
+`index.html`, because `/verify?token=…` is a URL somebody opens from their mail
+rather than a route the server handles.
+
+The look is deliberately one thing — warm near-black stone, iron borders,
+torchlight gold, square corners, Cinzel over Spectral. There is no light theme
+and no theme switch: a light version would be a different design rather than
+this one inverted.
+
 ## Configuration
 
 | Variable | Default | Meaning |

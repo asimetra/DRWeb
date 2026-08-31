@@ -117,6 +117,20 @@ export const buildApp = async ({
    */
   if (fs.existsSync(publicDir)) {
     await app.register(fastifyStatic, { root: publicDir });
+
+    /**
+     * The front end owns its own paths, and a confirmation link points at one
+     * of them. `/verify?token=…` is a real URL somebody opens from their mail,
+     * not a route this server has a handler for, so anything that is not the
+     * API and not a file on disk is answered with the application itself and
+     * routed once it is running.
+     */
+    app.setNotFoundHandler((request, reply) => {
+      if (request.url.startsWith("/api/")) {
+        return reply.code(404).send({ error: "not found" });
+      }
+      return reply.sendFile("index.html");
+    });
   }
 
   return app;
