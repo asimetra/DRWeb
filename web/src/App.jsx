@@ -8,7 +8,7 @@ import { Verify } from "./pages/Verify.jsx";
 import { Forgot } from "./pages/Forgot.jsx";
 import { Reset } from "./pages/Reset.jsx";
 import { Account } from "./pages/Account.jsx";
-import { Trade } from "./pages/Trade.jsx";
+import { Market } from "./pages/Market.jsx";
 
 export const App = () => (
   <ViewerProvider>
@@ -22,8 +22,7 @@ export const App = () => (
         <Route path="/forgot" element={<Forgot />} />
         <Route path="/reset" element={<Reset />} />
         <Route path="/account" element={<Account />} />
-        <Route path="/trade" element={<Trade />} />
-        <Route path="/trade/:id" element={<Trade />} />
+        <Route path="/market" element={<Market />} />
         {/* Anything unknown lands on the front page rather than a login form. */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

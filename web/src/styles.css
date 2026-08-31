@@ -505,19 +505,22 @@ a:hover { color: var(--link-hot); }
 .notice--bad { background: var(--bad-bg); border-color: var(--bad-edge); color: var(--bad-text); }
 .notice--good { background: var(--good-bg); border-color: var(--good-edge); color: var(--good-text); }
 
-/* ---------------------------------------------------------------- trade - */
+/* --------------------------------------------------------------- market - */
 
-.sides { display: grid; gap: 0.7rem; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); }
-.side { border: 1px solid var(--frame); padding: 0.6rem; background: var(--page-sunk); }
-.side__who { font-weight: 600; margin-bottom: 0.35rem; }
-.side__gold { font-variant-numeric: tabular-nums; color: var(--gold); }
-.side__state--yes { color: var(--good-text); }
+/** Gold is a number you compare, so it lines up and wears the chrome's colour. */
+.gold { font-variant-numeric: tabular-nums; color: var(--gold); font-weight: 600; }
 
-.wares { list-style: none; margin: 0.4rem 0 0; padding: 0; display: grid; gap: 0.25rem; }
-.ware { border: 1px solid var(--rule); padding: 0.25rem 0.45rem; font-size: 0.82rem; background: rgba(0, 0, 0, 0.25); }
-.ware--none { color: var(--text-dim); border-style: dashed; }
-.ware__id { font-family: var(--mono); color: var(--text-faint); font-size: 0.78rem; }
-.ware__fact { color: var(--text-dim); font-size: 0.78rem; }
+/** What is owed, and the one button that matters when anything is. */
+.claim {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+}
+
+/** A price is three or four digits, not a sentence. */
+.field__input--narrow { width: 7rem; }
 
 /* ----------------------------------------------------------------- misc - */
 

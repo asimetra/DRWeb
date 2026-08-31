@@ -401,7 +401,7 @@ const Menu = () => {
           <NavLink to="/leaderboard">Hall of Deeds</NavLink>
         </li>
         <li>
-          <NavLink to="/trade">Trade</NavLink>
+          <NavLink to="/market">Market</NavLink>
         </li>
         <li>
           <NavLink to="/account">My account</NavLink>

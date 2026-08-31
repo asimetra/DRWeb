@@ -126,80 +126,8 @@ export const setPassword = async (id, passwordHash) => {
   if (user) user.password_hash = passwordHash;
 };
 
-/* ------------------------------------------------------------------ trades - */
 
-const trades = new Map();
-let nextTradeId = 1;
-
-const tradeCopy = (trade) =>
-  trade && {
-    ...trade,
-    offers: Object.fromEntries(
-      Object.entries(trade.offers).map(([key, offer]) => [key, { ...offer, items: [...offer.items] }])
-    ),
-  };
-
-export const createTrade = async ({ proposerId, partnerId }) => {
-  const trade = {
-    id: nextTradeId++,
-    proposer_id: Number(proposerId),
-    partner_id: Number(partnerId),
-    state: "open",
-    created: new Date(),
-    closed: null,
-    offers: {
-      [Number(proposerId)]: { items: [], gold: 0, accepted: false },
-      [Number(partnerId)]: { items: [], gold: 0, accepted: false },
-    },
-  };
-  trades.set(trade.id, trade);
-  return tradeCopy(trade);
-};
-
-export const findTrade = async (id) => tradeCopy(trades.get(Number(id)));
-
-/** The open trade between these two, if there is one; a pair may only have one. */
-export const findOpenTradeBetween = async (first, second) => {
-  for (const trade of trades.values()) {
-    if (trade.state !== "open") continue;
-    const ids = [trade.proposer_id, trade.partner_id];
-    if (ids.includes(Number(first)) && ids.includes(Number(second))) return tradeCopy(trade);
-  }
-  return null;
-};
-
-export const openTradesFor = async (userId) =>
-  [...trades.values()]
-    .filter(
-      (trade) =>
-        trade.state === "open" &&
-        (trade.proposer_id === Number(userId) || trade.partner_id === Number(userId))
-    )
-    .map(tradeCopy);
-
-export const setTradeOffer = async (tradeId, userId, { items, gold }) => {
-  const trade = trades.get(Number(tradeId));
-  if (!trade) return null;
-  trade.offers[Number(userId)] = { items: [...items], gold: Number(gold), accepted: false };
-  // Either offer changing clears both agreements.
-  for (const offer of Object.values(trade.offers)) offer.accepted = false;
-  return tradeCopy(trade);
-};
-
-export const setTradeAccepted = async (tradeId, userId, accepted) => {
-  const trade = trades.get(Number(tradeId));
-  if (!trade) return null;
-  trade.offers[Number(userId)].accepted = Boolean(accepted);
-  return tradeCopy(trade);
-};
-
-export const closeTrade = async (tradeId, state) => {
-  const trade = trades.get(Number(tradeId));
-  if (!trade) return null;
-  trade.state = state;
-  trade.closed = new Date();
-  return tradeCopy(trade);
-};
+/* ------------------------------------------------------------------- life - */
 
 export const ping = async () => {};
 
@@ -207,7 +135,5 @@ export const close = async () => {
   users.clear();
   sessions.clear();
   tokens.clear();
-  trades.clear();
-  nextTradeId = 1;
   nextUserId = 1;
 };

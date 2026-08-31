@@ -108,7 +108,7 @@ export const Account = () => {
           <Fact label="Email confirmed">{user.verified ? "yes" : "no"}</Fact>
         </Facts>
         <Footnote>
-          <Quiet to="/trade">Trade with another player</Quiet>
+          <Quiet to="/market">Buy and sell on the market</Quiet>
         </Footnote>
       </Box>
 

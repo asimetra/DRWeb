@@ -6,7 +6,7 @@ import { config } from "./config.js";
  * Every account fact this application needs to *change* goes through here
  * rather than through SQL. The game server keeps the accounts that are in play
  * as live objects and orders its writers with locks that are local to that
- * process, so a second process writing the same rows is outside both: a trade
+ * process, so a second process writing the same rows is outside both: a sale
  * settled here while its owner is in a dungeon would be undone by the save at
  * the end of their run. Reading is a different matter — a profile page can
  * query the tables directly and get a consistent snapshot.
@@ -71,16 +71,39 @@ export const reissueToken = (accountId) =>
 export const revokeTokens = (accountId) =>
   call("DELETE", `/internal/v1/accounts/${Number(accountId)}/token`);
 
-/**
- * Both sides have agreed; move the goods. One call because the game server
- * does it as one transaction — the pair locked in id order, both accounts
- * written together — and splitting it would be inventing a way for a weapon
- * to end up on neither account.
- */
 /** How the server is doing, for the margins of every page. */
 export const readStatus = () => call("GET", "/internal/v1/status");
 
-export const settleTrade = (parties) => call("POST", "/internal/v1/trades", { parties });
+/**
+ * The market.
+ *
+ * All of it is the game server's, because all of it is game state: a listed
+ * weapon has left a bag and a sale moves gold between accounts. This
+ * application owns who is asking and nothing else — which is why every one of
+ * these takes its account id from the caller, and the caller takes it from the
+ * session rather than from the request.
+ */
+export const readMarket = (limit = 50) =>
+  call("GET", `/internal/v1/market?limit=${Number(limit)}`);
+
+export const readStall = (accountId) =>
+  call("GET", `/internal/v1/accounts/${Number(accountId)}/stall`);
+
+export const listForSale = (sellerId, itemId, price) =>
+  call("POST", "/internal/v1/market", {
+    sellerId: Number(sellerId),
+    itemId: Number(itemId),
+    price: Number(price),
+  });
+
+export const buyListing = (listingId, buyerId) =>
+  call("POST", `/internal/v1/market/${Number(listingId)}/buy`, { buyerId: Number(buyerId) });
+
+export const cancelListing = (listingId, sellerId) =>
+  call("POST", `/internal/v1/market/${Number(listingId)}/cancel`, { sellerId: Number(sellerId) });
+
+export const claimProceeds = (accountId) =>
+  call("POST", `/internal/v1/accounts/${Number(accountId)}/stall/claim`);
 
 /**
  * A standings table. `scope` carries the node, hero and party size that the

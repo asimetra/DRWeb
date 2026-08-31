@@ -89,10 +89,18 @@ export const api = {
     return call("GET", `/api/leaderboards/${metric}?${query}`);
   },
   inventory: () => call("GET", "/api/inventory"),
-  trade: (id) => call("GET", `/api/trades/${id}`),
-  startTrade: (partnerAccountId) => call("POST", "/api/trades", { partnerAccountId }),
-  setTradeOffer: (id, offer) => call("PUT", `/api/trades/${id}/offer`, offer),
-  acceptTrade: (id) => call("POST", `/api/trades/${id}/accept`),
-  cancelTrade: (id) => call("POST", `/api/trades/${id}/cancel`),
+
+  /*
+   * The market. Which account each of these acts on is decided on the server
+   * from the session — nothing here sends an account id, because an account id
+   * a browser could choose would be a way to sell somebody else's weapons.
+   */
+  market: (limit = 50) => call("GET", `/api/market?limit=${Number(limit)}`),
+  stall: () => call("GET", "/api/market/stall"),
+  listForSale: (itemId, price) => call("POST", "/api/market", { itemId, price }),
+  buyListing: (id) => call("POST", `/api/market/${Number(id)}/buy`),
+  cancelListing: (id) => call("POST", `/api/market/${Number(id)}/cancel`),
+  claimProceeds: () => call("POST", "/api/market/claim"),
+
   revokeGameTokens: () => call("DELETE", "/api/game-token"),
 };

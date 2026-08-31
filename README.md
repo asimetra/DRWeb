@@ -11,7 +11,7 @@ Server code only. It is useless on its own — it needs a game server to talk to
 The game server owns the account tables and is the only thing that writes them.
 That is not tidiness. It keeps the accounts that are in play as live objects in
 memory and orders its writers with locks that are local to that process, so a
-second process writing the same rows sits outside both: a trade settled here
+second process writing the same rows sits outside both: a sale settled here
 while its owner was in a dungeon would be undone by the save at the end of
 their run.
 
@@ -128,12 +128,12 @@ with it — fetch a fresh one afterwards.
 | `POST /api/password/reset` | Sets a new password, ends every session, revokes the game token |
 | `POST /api/password` | Changes a password you already know |
 | `GET /api/inventory` | Your unequipped weapons and gold |
-| `POST /api/trades` | Opens a trade with a player, named by game account id |
-| `GET /api/trades/:id` | One trade, from your side |
-| `PUT /api/trades/:id/offer` | Sets what you are offering — clears both acceptances |
-| `POST /api/trades/:id/accept` | Agrees, and settles when the other side already has |
-| `POST /api/trades/:id/cancel` | Closes it |
-| `GET /api/trades/:id/live` | WebSocket: the trade, pushed on every change |
+| `GET /api/market` | Everything up for sale — open, no sign-in needed |
+| `GET /api/market/stall` | Your own: what is up, what sold, what is owed |
+| `POST /api/market` | Puts a weapon up at a price |
+| `POST /api/market/:id/buy` | Buys one |
+| `POST /api/market/:id/cancel` | Takes one of yours back down |
+| `POST /api/market/claim` | Collects the gold from everything that sold |
 | `POST /api/logout` | Ends the session |
 | `GET /api/me` | Who you are signed in as |
 | `POST /api/game-token` | A replacement client token |
@@ -205,27 +205,34 @@ differently: other web sessions end, and the game client is left alone. Knowing
 the current password claims no compromise, and signing somebody out of the game
 for tidying up their password would be a surprise.
 
-## Trading
+## The market
 
-The negotiation lives here and the movement does not. Who proposed the trade,
-what each side is offering and who has agreed is a conversation, so it sits in
-this application's own tables. The moment both sides have agreed, the game
-server is asked once, and it moves the weapons and gold on a single transaction
-with both accounts locked.
+A player puts a weapon up at a price and walks away; anybody buys it; the seller
+collects the gold when they next look. Nobody has to be online at the same time
+as anybody else, which is the whole difference from the trade window this
+replaced and the reason it is worth having on a server whose players are not all
+awake at once.
 
-The rule that carries the feature is that **any change to either offer clears
-both acceptances**. Without it, the moment between "they agreed" and "the goods
-moved" is long enough to swap a legendary for a stick. It is enforced in the
-storage layer, in the same transaction as the change, so there is no instant in
-which one side's acceptance stands against an offer it never saw.
+**None of it lives here.** A listed weapon has left a bag and a sale moves gold
+between two accounts, so every part of it is game state and belongs to the
+server that owns the accounts. That server keeps the listing on the seller's own
+account — beside their weapons rather than in a table of its own — so putting
+one up is a single atomic write rather than two writes with a crash-shaped gap
+between them.
 
-A refusal from the game server — the other player walked into a dungeon, a
-weapon turned out to be equipped, a bag is full — leaves the trade open and
-clears both acceptances, because whatever it objected to has to change and an
-acceptance that survives a change is the thing the rule exists to prevent.
+This application's whole job is to say **who is asking**, and that is the
+security of the feature. The game server's internal API is behind a shared token
+and will act on whatever account id it is handed, so every route here takes the
+id from the session and ignores the request's opinion of it. A `sellerId` a
+browser could choose would be a way to sell somebody else's weapons.
 
-Each side sees the other's offer and not their bag. `GET /api/inventory` is
-about you only.
+Refusals are passed through with their own status rather than flattened, because
+the screen has to do different things with them: `410` means somebody bought it
+first and the row should come off the page, `409` means something the player can
+fix — a full bag, a weapon still equipped, being in a dungeon.
+
+`GET /api/market` is readable signed out. A market nobody can look at before
+joining is a market nobody joins for.
 
 ## Tests
 
