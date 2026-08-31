@@ -1,36 +1,43 @@
 /*
- * Torchlit stone.
+ * Account pages, in the manner of an older game's website: a dark ground, a
+ * column of cream boxes with brown rules, and small plain type set at the size
+ * things were set at before everything got big.
  *
- * Everything here is warm and dark: the base is a brown-black rather than a
- * blue-black, the accents are old gold and lamp amber, and the one bright
- * colour in the palette is the red on a refusal. Corners are square, borders
- * are drawn rather than blurred, and the only shadows are the hard black kind
- * a real edge casts.
+ * The restraint is the point. There is no display face, no glow, no vignette
+ * and no ornament — a heading is a brown bar with a word in it, and a form is
+ * a form. What character the page has comes from the palette and the density,
+ * not from decoration laid over the top.
  */
 
 :root {
-  --ink: #0a0908;
-  --stone: #14110d;
-  --stone-lit: #1b1712;
-  --stone-sunk: #0d0b09;
+  --outside: #17150f;
+  --outside-edge: #0c0b08;
 
-  --edge: #33291f;
-  --edge-lit: #55452f;
-  --gold: #c8a44d;
-  --gold-dim: #6f5a30;
-  --amber: #e2a53f;
+  --page: #f2e6cd;
+  --page-alt: #e4d3b3;
+  --page-sunk: #d8c49f;
 
-  --parchment: #cabca2;
-  --parchment-dim: #8b7d68;
-  --parchment-bright: #eadfc6;
+  --rule: #8a7550;
+  --rule-dark: #5c4a2e;
+  --bar: #4c3d26;
+  --bar-lit: #63502f;
 
-  --blood: #a33529;
-  --blood-dim: #4a1d18;
-  --moss: #7c9450;
+  --text: #2a2317;
+  --text-dim: #6a5a41;
+  --text-on-bar: #f2e6cd;
 
-  --display: "Cinzel", "Trajan Pro", Georgia, serif;
-  --body: "Spectral", Georgia, "Times New Roman", serif;
-  --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, monospace;
+  --link: #8a3d12;
+  --link-hot: #b35418;
+
+  --bad-bg: #f0d4cd;
+  --bad-edge: #a8422e;
+  --bad-text: #6d2216;
+  --good-bg: #dce6cd;
+  --good-edge: #5f7d3a;
+  --good-text: #33471c;
+
+  --ui: Verdana, "DejaVu Sans", Geneva, Tahoma, sans-serif;
+  --mono: ui-monospace, "DejaVu Sans Mono", "Courier New", monospace;
 }
 
 * {
@@ -45,404 +52,270 @@ body,
 
 body {
   margin: 0;
-  background-color: var(--ink);
-  color: var(--parchment);
-  font-family: var(--body);
-  font-size: 16px;
-  line-height: 1.65;
-  -webkit-font-smoothing: antialiased;
+  background-color: var(--outside);
+  background-image:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.55), transparent 240px),
+    repeating-linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.012) 0 2px,
+      transparent 2px 5px
+    );
+  color: var(--text);
+  font-family: var(--ui);
+  font-size: 13px;
+  line-height: 1.55;
 }
 
-/*
- * Two layers over the flat colour: a slow radial that leaves the corners
- * darker than the middle, the way a lamp in the room would, and a fine noise
- * so that large areas are never a perfectly even field.
- */
-body::before,
-body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-}
-
-body::before {
-  background:
-    radial-gradient(120% 90% at 50% -10%, rgba(226, 165, 63, 0.07), transparent 55%),
-    radial-gradient(100% 100% at 50% 120%, rgba(163, 53, 41, 0.05), transparent 60%);
-}
-
-body::after {
-  opacity: 0.035;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-}
-
-/* ---------------------------------------------------------------- layout - */
+/* ------------------------------------------------------------------ page - */
 
 .shell {
-  position: relative;
-  z-index: 1;
-  min-height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 48px 20px 64px;
-}
-
-.crest {
-  text-align: center;
-  margin-bottom: 34px;
-}
-
-.crest__mark {
-  display: block;
-  margin: 0 auto 14px;
-  color: var(--gold-dim);
-}
-
-.crest__title {
-  font-family: var(--display);
-  font-weight: 600;
-  font-size: clamp(24px, 4vw, 34px);
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--parchment-bright);
-  margin: 0;
-  text-shadow: 0 2px 0 #000, 0 0 26px rgba(226, 165, 63, 0.18);
-}
-
-.crest__sub {
-  margin: 6px 0 0;
-  font-size: 13px;
-  letter-spacing: 0.32em;
-  text-transform: uppercase;
-  color: var(--parchment-dim);
-}
-
-/* ----------------------------------------------------------------- panel - */
-
-.panel {
-  position: relative;
-  width: 100%;
-  max-width: 460px;
-  padding: 30px 32px 32px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.022), transparent 120px),
-    linear-gradient(180deg, var(--stone-lit), var(--stone) 40%, var(--stone-sunk));
-  border: 1px solid var(--edge);
-  box-shadow:
-    inset 0 1px 0 rgba(226, 165, 63, 0.09),
-    inset 0 0 60px rgba(0, 0, 0, 0.55),
-    0 18px 50px rgba(0, 0, 0, 0.65);
-}
-
-.panel--wide {
   max-width: 620px;
+  margin: 0 auto;
+  padding: 0 14px 48px;
 }
 
-/*
- * Corner brackets, drawn as eight one-pixel gradients on a single overlay
- * rather than as four elements or an image. They are what stops the panel
- * reading as a rounded card with a border.
- */
-.panel::after {
-  content: "";
-  position: absolute;
-  inset: 5px;
-  pointer-events: none;
-  background-image:
-    linear-gradient(var(--gold-dim), var(--gold-dim)),
-    linear-gradient(var(--gold-dim), var(--gold-dim)),
-    linear-gradient(var(--gold-dim), var(--gold-dim)),
-    linear-gradient(var(--gold-dim), var(--gold-dim)),
-    linear-gradient(var(--gold-dim), var(--gold-dim)),
-    linear-gradient(var(--gold-dim), var(--gold-dim)),
-    linear-gradient(var(--gold-dim), var(--gold-dim)),
-    linear-gradient(var(--gold-dim), var(--gold-dim));
-  background-repeat: no-repeat;
-  background-size:
-    14px 1px, 1px 14px,
-    14px 1px, 1px 14px,
-    14px 1px, 1px 14px,
-    14px 1px, 1px 14px;
-  background-position:
-    left top, left top,
-    right top, right top,
-    left bottom, left bottom,
-    right bottom, right bottom;
-}
-
-.panel__head {
-  font-family: var(--display);
-  font-size: 17px;
-  font-weight: 600;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--parchment-bright);
-  margin: 0 0 4px;
-}
-
-.panel__lede {
-  margin: 0 0 22px;
-  color: var(--parchment-dim);
-  font-size: 14.5px;
-}
-
-/* ------------------------------------------------------------- ornaments - */
-
-.rule {
+.topbar {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 26px 0 20px;
-  color: var(--gold-dim);
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 9px 12px;
+  margin: 0 -14px 20px;
+  background: linear-gradient(180deg, var(--bar-lit), var(--bar));
+  border-bottom: 2px solid var(--outside-edge);
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.4);
 }
 
-.rule::before,
-.rule::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--edge-lit), transparent);
+.topbar__name {
+  margin: 0;
+  font-size: 13px;
+  font-weight: bold;
+  letter-spacing: 0.06em;
+  color: var(--text-on-bar);
 }
 
-.rule__gem {
-  width: 6px;
-  height: 6px;
-  transform: rotate(45deg);
-  background: var(--gold-dim);
-  box-shadow: 0 0 8px rgba(226, 165, 63, 0.35);
+.topbar__where {
+  font-size: 11px;
+  color: #b9a884;
 }
 
-/* ----------------------------------------------------------------- forms - */
+/* ------------------------------------------------------------------ box - */
+
+.box {
+  background: var(--page);
+  border: 1px solid var(--rule-dark);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.15) inset, 0 3px 8px rgba(0, 0, 0, 0.45);
+  margin-bottom: 16px;
+}
+
+.box__title {
+  margin: 0;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: bold;
+  color: var(--text-on-bar);
+  background: linear-gradient(180deg, var(--bar-lit), var(--bar));
+  border-bottom: 1px solid var(--rule-dark);
+}
+
+.box__body {
+  padding: 12px 14px 14px;
+}
+
+.box__body > p:first-child {
+  margin-top: 0;
+}
+
+.box__body > :last-child {
+  margin-bottom: 0;
+}
+
+.lede {
+  margin: 0 0 12px;
+  color: var(--text-dim);
+}
+
+/* ----------------------------------------------------------------- rows - */
+
+.rows {
+  border-top: 1px solid var(--rule);
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 5px 10px;
+  border-bottom: 1px solid var(--rule);
+  background: var(--page-alt);
+}
+
+.row:nth-child(even) {
+  background: var(--page);
+}
+
+.row__key {
+  color: var(--text-dim);
+}
+
+.row__value {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ----------------------------------------------------------------- form - */
 
 .field {
   display: block;
-  margin-bottom: 18px;
+  margin-bottom: 11px;
 }
 
 .field__label {
   display: block;
-  font-size: 11.5px;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--parchment-dim);
-  margin-bottom: 7px;
+  margin-bottom: 3px;
+  font-size: 11px;
+  font-weight: bold;
+  color: var(--text-dim);
 }
 
 .field__input {
   width: 100%;
-  padding: 11px 13px;
-  font-family: var(--body);
-  font-size: 15px;
-  color: var(--parchment-bright);
-  background: var(--stone-sunk);
-  border: 1px solid var(--edge);
+  padding: 5px 7px;
+  font-family: var(--ui);
+  font-size: 13px;
+  color: var(--text);
+  background: #fbf4e6;
+  border: 1px solid var(--rule);
   border-radius: 0;
-  box-shadow: inset 0 2px 7px rgba(0, 0, 0, 0.7);
+  box-shadow: inset 1px 1px 2px rgba(92, 74, 46, 0.28);
   outline: none;
-  transition: border-color 120ms linear, box-shadow 120ms linear;
-}
-
-.field__input::placeholder {
-  color: #5d5346;
 }
 
 .field__input:focus {
-  border-color: var(--gold-dim);
-  box-shadow:
-    inset 0 2px 7px rgba(0, 0, 0, 0.7),
-    0 0 0 1px rgba(200, 164, 77, 0.28),
-    0 0 16px rgba(226, 165, 63, 0.12);
+  border-color: var(--rule-dark);
+  background: #fff;
 }
 
 .field__hint {
-  margin: 6px 0 0;
-  font-size: 12.5px;
-  color: var(--parchment-dim);
+  display: block;
+  margin-top: 3px;
+  font-size: 11px;
+  color: var(--text-dim);
 }
 
-/* ---------------------------------------------------------------- button - */
+/* --------------------------------------------------------------- button - */
 
 .button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  padding: 12px 18px;
-  font-family: var(--display);
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--gold);
+  display: inline-block;
+  padding: 4px 14px;
+  font-family: var(--ui);
+  font-size: 12px;
+  font-weight: bold;
+  color: var(--text);
   cursor: pointer;
-  background: linear-gradient(180deg, #2b2418, #1a150e);
-  border: 1px solid var(--edge-lit);
+  background: linear-gradient(180deg, #eadcbf, var(--page-sunk));
+  border: 1px solid var(--rule-dark);
   border-radius: 0;
   box-shadow:
-    inset 0 1px 0 rgba(226, 165, 63, 0.16),
-    inset 0 -8px 16px rgba(0, 0, 0, 0.45),
-    0 2px 0 #000;
-  transition: color 120ms linear, border-color 120ms linear, box-shadow 120ms linear;
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -1px 0 rgba(92, 74, 46, 0.2);
 }
 
 .button:hover:not(:disabled) {
-  color: var(--amber);
-  border-color: var(--gold-dim);
-  box-shadow:
-    inset 0 1px 0 rgba(226, 165, 63, 0.26),
-    inset 0 -8px 16px rgba(0, 0, 0, 0.45),
-    0 0 20px rgba(226, 165, 63, 0.14),
-    0 2px 0 #000;
+  background: linear-gradient(180deg, #f5ead2, #e0cca6);
 }
 
 .button:active:not(:disabled) {
-  transform: translateY(1px);
-  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.7);
+  box-shadow: inset 1px 1px 3px rgba(92, 74, 46, 0.4);
 }
 
 .button:disabled {
-  color: var(--parchment-dim);
+  color: var(--text-dim);
   cursor: not-allowed;
-  opacity: 0.55;
-}
-
-.button--quiet {
-  background: none;
-  border-color: var(--edge);
-  color: var(--parchment-dim);
-  box-shadow: none;
-}
-
-.button--quiet:hover:not(:disabled) {
-  color: var(--parchment);
-  border-color: var(--edge-lit);
-  box-shadow: none;
+  background: var(--page-alt);
 }
 
 .button--danger {
-  color: #d08074;
-  border-color: var(--blood-dim);
-  background: linear-gradient(180deg, #2a1712, #190d0a);
+  color: var(--bad-text);
 }
 
-.button--danger:hover:not(:disabled) {
-  color: #e39a8d;
-  border-color: var(--blood);
-  box-shadow: 0 0 18px rgba(163, 53, 41, 0.2), 0 2px 0 #000;
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
 }
 
-/* --------------------------------------------------------------- notices - */
+/* --------------------------------------------------------------- notice - */
 
 .notice {
-  padding: 11px 14px;
-  margin-bottom: 18px;
-  font-size: 14px;
-  border-left: 3px solid var(--edge-lit);
-  background: rgba(0, 0, 0, 0.35);
+  padding: 6px 9px;
+  margin-bottom: 12px;
+  border: 1px solid var(--rule);
+  background: var(--page-alt);
 }
 
 .notice--bad {
-  border-left-color: var(--blood);
-  color: #dfa79c;
-  background: rgba(74, 29, 24, 0.3);
+  border-color: var(--bad-edge);
+  background: var(--bad-bg);
+  color: var(--bad-text);
 }
 
 .notice--good {
-  border-left-color: var(--moss);
-  color: #b9caa0;
-  background: rgba(46, 58, 32, 0.28);
+  border-color: var(--good-edge);
+  background: var(--good-bg);
+  color: var(--good-text);
 }
 
-/* ----------------------------------------------------------------- token - */
+/* ---------------------------------------------------------------- token - */
 
-/*
- * The one thing on the site a player has to copy by hand, so it is set apart
- * from everything else: monospace, boxed, selectable in one gesture.
- */
 .token {
   display: block;
-  width: 100%;
-  padding: 12px 14px;
+  padding: 6px 8px;
   font-family: var(--mono);
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: 12px;
+  line-height: 1.45;
   word-break: break-all;
-  color: var(--amber);
-  background: #060505;
-  border: 1px solid var(--edge);
-  box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.8);
+  color: var(--text);
+  background: #fbf4e6;
+  border: 1px solid var(--rule);
+  box-shadow: inset 1px 1px 2px rgba(92, 74, 46, 0.28);
 }
 
-.token__row {
-  display: flex;
-  gap: 10px;
-  margin-top: 10px;
+.token + .field__label {
+  margin-top: 9px;
 }
 
-.token__row .button {
-  width: auto;
-  flex: 1;
-}
-
-/* ------------------------------------------------------------------ misc - */
-
-.stack > * + * {
-  margin-top: 14px;
-}
-
-.meta {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 9px 0;
-  border-bottom: 1px dotted var(--edge);
-  font-size: 14.5px;
-}
-
-.meta:last-child {
-  border-bottom: none;
-}
-
-.meta__key {
-  color: var(--parchment-dim);
-  letter-spacing: 0.06em;
-}
-
-.meta__value {
-  color: var(--parchment-bright);
-  text-align: right;
-}
+/* ----------------------------------------------------------------- misc - */
 
 .link {
-  color: var(--gold);
-  text-decoration: none;
-  border-bottom: 1px dotted var(--gold-dim);
+  color: var(--link);
+  text-decoration: underline;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
 }
 
 .link:hover {
-  color: var(--amber);
-  border-bottom-color: var(--amber);
+  color: var(--link-hot);
 }
 
-.aside {
-  margin-top: 22px;
-  text-align: center;
-  font-size: 14px;
-  color: var(--parchment-dim);
+.footnote {
+  margin: 12px 0 0;
+  padding-top: 9px;
+  border-top: 1px solid var(--rule);
+  font-size: 11.5px;
+  color: var(--text-dim);
 }
 
-.aside > * + * {
-  margin-top: 6px;
+.footnote a,
+.footnote .link {
+  font-size: 11.5px;
 }
 
 .wait {
-  text-align: center;
-  padding: 40px 0;
-  color: var(--parchment-dim);
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  font-size: 12px;
+  padding: 8px 0;
+  color: var(--text-dim);
 }

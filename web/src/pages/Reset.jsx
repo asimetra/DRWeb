@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { api, ApiError } from "../api.js";
-import { Aside, Button, Field, Notice, Panel, Quiet, Rule } from "../components/Chrome.jsx";
+import { Box, Button, Buttons, Field, Footnote, Notice, Quiet, TopBar } from "../components/Chrome.jsx";
 import { GameToken } from "../components/GameToken.jsx";
 
 export const Reset = () => {
@@ -18,7 +18,7 @@ export const Reset = () => {
     try {
       setDone(await api.resetPassword({ token: params.get("token"), password }));
     } catch (failure) {
-      setProblem(failure instanceof ApiError ? failure.message : "something went wrong");
+      setProblem(failure instanceof ApiError ? failure.message : "Something went wrong.");
     } finally {
       setBusy(false);
     }
@@ -26,47 +26,50 @@ export const Reset = () => {
 
   if (done) {
     return (
-      <Panel title="Taken back" lede="The password is changed and every session has been closed." wide>
-        <Notice kind="good">
-          Your old client token was revoked as well — anybody who had taken one
-          cannot keep playing on it.
-        </Notice>
-        {done.game ? <GameToken game={done.game} /> : null}
-        <Rule />
-        <Aside>
-          <p>
-            <Quiet to="/account">Go to your account</Quiet>
-          </p>
-        </Aside>
-      </Panel>
+      <>
+        <TopBar where="Reset Password" />
+        <Box title="Password Changed">
+          <Notice kind="good">
+            All sessions were closed and every game token for this account was
+            revoked, so nobody can keep playing on a token taken while they had
+            access.
+          </Notice>
+          {done.game ? <GameToken game={done.game} /> : null}
+          <Footnote>
+            <Quiet to="/account">Go to account management</Quiet>
+          </Footnote>
+        </Box>
+      </>
     );
   }
 
   return (
-    <Panel title="Choose a new password" lede="Everything signed in with the old one will be shut out.">
-      <Notice kind="bad">{problem}</Notice>
-      <form onSubmit={submit}>
-        <Field
-          label="New password"
-          type="password"
-          name="password"
-          autoComplete="new-password"
-          required
-          minLength={10}
-          hint="At least ten characters."
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-        />
-        <Rule />
-        <Button type="submit" disabled={busy}>
-          {busy ? "Setting" : "Set the password"}
-        </Button>
-      </form>
-      <Aside>
-        <p>
-          <Quiet to="/forgot">Ask for another link</Quiet>
-        </p>
-      </Aside>
-    </Panel>
+    <>
+      <TopBar where="Reset Password" />
+      <Box title="Choose a New Password" lede="Anything signed in with the old password will be logged out.">
+        <Notice kind="bad">{problem}</Notice>
+        <form onSubmit={submit}>
+          <Field
+            label="New password"
+            type="password"
+            name="password"
+            autoComplete="new-password"
+            required
+            minLength={10}
+            hint="At least 10 characters."
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+          />
+          <Buttons>
+            <Button type="submit" disabled={busy}>
+              {busy ? "Submitting" : "Set password"}
+            </Button>
+          </Buttons>
+        </form>
+        <Footnote>
+          <Quiet to="/forgot">Request another link</Quiet>
+        </Footnote>
+      </Box>
+    </>
   );
 };

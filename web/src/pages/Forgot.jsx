@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { api } from "../api.js";
-import { Aside, Button, Field, Notice, Panel, Quiet, Rule } from "../components/Chrome.jsx";
+import { Box, Button, Buttons, Field, Footnote, Quiet, TopBar } from "../components/Chrome.jsx";
 
 export const Forgot = () => {
   const [email, setEmail] = useState("");
@@ -10,8 +10,7 @@ export const Forgot = () => {
   const submit = async (event) => {
     event.preventDefault();
     setBusy(true);
-    // The answer is the same either way — see the note below, which is the
-    // same reason the server gives.
+    // The answer is the same either way, which is why the failure is ignored.
     await api.forgotPassword(email).catch(() => undefined);
     setSent(true);
     setBusy(false);
@@ -19,42 +18,46 @@ export const Forgot = () => {
 
   if (sent) {
     return (
-      <Panel title="If that address is known here" lede="A link is on its way to it.">
-        <Notice>
-          We answer the same whether or not anybody has signed up with that
-          address, so that this page cannot be used to find out who has.
-        </Notice>
-        <Aside>
+      <>
+        <TopBar where="Reset Password" />
+        <Box title="Reset Password">
+          <p>If an account exists for that address, a reset link is on its way to it.</p>
           <p>
-            <Quiet to="/login">Back to the door</Quiet>
+            The answer is the same whether or not the address is registered, so
+            that this page cannot be used to find out who has an account here.
           </p>
-        </Aside>
-      </Panel>
+          <Footnote>
+            <Quiet to="/login">Back to login</Quiet>
+          </Footnote>
+        </Box>
+      </>
     );
   }
 
   return (
-    <Panel title="Lost the password" lede="Give the address you signed up with.">
-      <form onSubmit={submit}>
-        <Field
-          label="Email"
-          type="email"
-          name="email"
-          autoComplete="email"
-          required
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-        />
-        <Rule />
-        <Button type="submit" disabled={busy}>
-          {busy ? "Sending" : "Send a link"}
-        </Button>
-      </form>
-      <Aside>
-        <p>
-          <Quiet to="/login">Back to the door</Quiet>
-        </p>
-      </Aside>
-    </Panel>
+    <>
+      <TopBar where="Reset Password" />
+      <Box title="Reset Password" lede="Enter the email address you registered with.">
+        <form onSubmit={submit}>
+          <Field
+            label="Email"
+            type="email"
+            name="email"
+            autoComplete="email"
+            required
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+          />
+          <Buttons>
+            <Button type="submit" disabled={busy}>
+              {busy ? "Submitting" : "Send reset link"}
+            </Button>
+          </Buttons>
+        </form>
+        <Footnote>
+          <Quiet to="/login">Back to login</Quiet>
+        </Footnote>
+      </Box>
+    </>
   );
 };

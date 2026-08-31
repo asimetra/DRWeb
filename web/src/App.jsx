@@ -1,5 +1,4 @@
 import { Navigate, Route, Routes } from "react-router-dom";
-import { Crest } from "./components/Chrome.jsx";
 import { Register } from "./pages/Register.jsx";
 import { Login } from "./pages/Login.jsx";
 import { Verify } from "./pages/Verify.jsx";
@@ -9,7 +8,6 @@ import { Account } from "./pages/Account.jsx";
 
 export const App = () => (
   <div className="shell">
-    <Crest />
     <Routes>
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/register" element={<Register />} />

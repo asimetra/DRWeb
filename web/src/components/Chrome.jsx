@@ -1,42 +1,25 @@
 import { Link } from "react-router-dom";
 
 /**
- * The sigil over the door: a keyhole cut into a shield, drawn rather than
- * lettered so the page has one mark that is not type.
+ * A bar with the site's name at one end and the page's at the other. There is
+ * no wordmark and no crest: the name is a label, the way it is on a site whose
+ * job is account admin rather than an announcement.
  */
-const Sigil = () => (
-  <svg className="crest__mark" width="46" height="52" viewBox="0 0 46 52" fill="none" aria-hidden="true">
-    <path
-      d="M23 2 4 9v18c0 12 8 19 19 23 11-4 19-11 19-23V9L23 2Z"
-      stroke="currentColor"
-      strokeWidth="1.4"
-    />
-    <path d="M23 8 9 13v14c0 9 6 15 14 18 8-3 14-9 14-18V13L23 8Z" stroke="currentColor" strokeWidth="0.7" opacity=".55" />
-    <circle cx="23" cy="24" r="4.4" stroke="currentColor" strokeWidth="1.4" />
-    <path d="M23 28.4 20.8 38h4.4L23 28.4Z" fill="currentColor" />
-  </svg>
-);
-
-export const Crest = ({ sub = "Dungeon Server" }) => (
-  <header className="crest">
-    <Sigil />
-    <h1 className="crest__title">Open Dungeon</h1>
-    <p className="crest__sub">{sub}</p>
-  </header>
-);
-
-export const Panel = ({ title, lede, wide = false, children }) => (
-  <section className={wide ? "panel panel--wide" : "panel"}>
-    {title ? <h2 className="panel__head">{title}</h2> : null}
-    {lede ? <p className="panel__lede">{lede}</p> : null}
-    {children}
-  </section>
-);
-
-export const Rule = () => (
-  <div className="rule" aria-hidden="true">
-    <span className="rule__gem" />
+export const TopBar = ({ where }) => (
+  <div className="topbar">
+    <p className="topbar__name">Open Dungeon</p>
+    <span className="topbar__where">{where}</span>
   </div>
+);
+
+export const Box = ({ title, lede, children }) => (
+  <section className="box">
+    {title ? <h2 className="box__title">{title}</h2> : null}
+    <div className="box__body">
+      {lede ? <p className="lede">{lede}</p> : null}
+      {children}
+    </div>
+  </section>
 );
 
 export const Notice = ({ kind = "", children }) =>
@@ -56,14 +39,18 @@ export const Button = ({ kind, children, ...rest }) => (
   </button>
 );
 
-export const Meta = ({ label, children }) => (
-  <div className="meta">
-    <span className="meta__key">{label}</span>
-    <span className="meta__value">{children}</span>
+export const Buttons = ({ children }) => <div className="buttons">{children}</div>;
+
+export const Rows = ({ children }) => <div className="rows">{children}</div>;
+
+export const Row = ({ label, children }) => (
+  <div className="row">
+    <span className="row__key">{label}</span>
+    <span className="row__value">{children}</span>
   </div>
 );
 
-export const Aside = ({ children }) => <div className="aside">{children}</div>;
+export const Footnote = ({ children }) => <p className="footnote">{children}</p>;
 
 export const Quiet = ({ to, children }) => (
   <Link className="link" to={to}>

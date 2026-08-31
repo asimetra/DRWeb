@@ -74,10 +74,10 @@ Anything that is not `/api/…` and not a file on disk is answered with
 `index.html`, because `/verify?token=…` is a URL somebody opens from their mail
 rather than a route the server handles.
 
-The look is deliberately one thing — warm near-black stone, iron borders,
-torchlight gold, square corners, Cinzel over Spectral. There is no light theme
-and no theme switch: a light version would be a different design rather than
-this one inverted.
+The look is cream content boxes on a dark ground, brown rules, Verdana at 13px
+— the shape an older game's account pages take. No display face, no webfont, no
+ornament: a heading is a bar with a noun in it. The copy matches. Buttons say
+what they do and nothing narrates.
 
 ## Configuration
 

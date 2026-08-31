@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api, ApiError } from "../api.js";
-import { Aside, Button, Field, Notice, Panel, Quiet, Rule } from "../components/Chrome.jsx";
+import { Box, Button, Buttons, Field, Footnote, Notice, Quiet, TopBar } from "../components/Chrome.jsx";
 
 export const Login = () => {
   const navigate = useNavigate();
@@ -19,46 +19,47 @@ export const Login = () => {
       await api.login(form);
       navigate("/account");
     } catch (failure) {
-      setProblem(failure instanceof ApiError ? failure.message : "something went wrong");
+      setProblem(failure instanceof ApiError ? failure.message : "Something went wrong.");
       setBusy(false);
     }
   };
 
   return (
-    <Panel title="Enter" lede="The way back in.">
-      <Notice kind="bad">{problem}</Notice>
-      <form onSubmit={submit}>
-        <Field
-          label="Email"
-          type="email"
-          name="email"
-          autoComplete="email"
-          required
-          value={form.email}
-          onChange={change("email")}
-        />
-        <Field
-          label="Password"
-          type="password"
-          name="password"
-          autoComplete="current-password"
-          required
-          value={form.password}
-          onChange={change("password")}
-        />
-        <Rule />
-        <Button type="submit" disabled={busy}>
-          {busy ? "Opening" : "Sign in"}
-        </Button>
-      </form>
-      <Aside>
-        <p>
-          <Quiet to="/forgot">Lost the password</Quiet>
-        </p>
-        <p>
-          No account yet? <Quiet to="/register">Sign up</Quiet>
-        </p>
-      </Aside>
-    </Panel>
+    <>
+      <TopBar where="Login" />
+      <Box title="Account Login">
+        <Notice kind="bad">{problem}</Notice>
+        <form onSubmit={submit}>
+          <Field
+            label="Email"
+            type="email"
+            name="email"
+            autoComplete="email"
+            required
+            value={form.email}
+            onChange={change("email")}
+          />
+          <Field
+            label="Password"
+            type="password"
+            name="password"
+            autoComplete="current-password"
+            required
+            value={form.password}
+            onChange={change("password")}
+          />
+          <Buttons>
+            <Button type="submit" disabled={busy}>
+              {busy ? "Submitting" : "Log in"}
+            </Button>
+          </Buttons>
+        </form>
+        <Footnote>
+          <Quiet to="/forgot">Forgot your password?</Quiet>
+          {" · "}
+          <Quiet to="/register">Create an account</Quiet>
+        </Footnote>
+      </Box>
+    </>
   );
 };

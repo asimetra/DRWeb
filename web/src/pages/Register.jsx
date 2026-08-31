@@ -1,10 +1,8 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { api, ApiError } from "../api.js";
-import { Aside, Button, Field, Notice, Panel, Quiet, Rule } from "../components/Chrome.jsx";
+import { Box, Button, Buttons, Field, Footnote, Notice, Quiet, TopBar } from "../components/Chrome.jsx";
 
 export const Register = () => {
-  const navigate = useNavigate();
   const [form, setForm] = useState({ email: "", password: "" });
   const [problem, setProblem] = useState("");
   const [sent, setSent] = useState(false);
@@ -21,7 +19,7 @@ export const Register = () => {
       await api.register(form);
       setSent(true);
     } catch (failure) {
-      setProblem(failure instanceof ApiError ? failure.message : "something went wrong");
+      setProblem(failure instanceof ApiError ? failure.message : "Something went wrong.");
     } finally {
       setBusy(false);
     }
@@ -29,66 +27,72 @@ export const Register = () => {
 
   if (sent) {
     return (
-      <Panel title="Check your mail" lede={`A link is on its way to ${form.email}.`}>
-        <Notice>
-          Your account is made when you open it — not before. Nothing has been
-          created yet, and nothing will be if the link is never opened.
-        </Notice>
-        <Rule />
-        <Button
-          type="button"
-          kind="quiet"
-          disabled={resent}
-          onClick={async () => {
-            await api.resendVerification(form.email);
-            setResent(true);
-          }}
-        >
-          {resent ? "Another link sent" : "Send it again"}
-        </Button>
-        <Aside>
+      <>
+        <TopBar where="Create Account" />
+        <Box title="Check your email">
           <p>
-            <Quiet to="/login">Back to the door</Quiet>
+            A confirmation link has been sent to <strong>{form.email}</strong>.
           </p>
-        </Aside>
-      </Panel>
+          <p>
+            Your game account is created when you open it. Nothing has been
+            created yet.
+          </p>
+          <Buttons>
+            <Button
+              type="button"
+              disabled={resent}
+              onClick={async () => {
+                await api.resendVerification(form.email);
+                setResent(true);
+              }}
+            >
+              {resent ? "Link sent" : "Send another link"}
+            </Button>
+          </Buttons>
+          <Footnote>
+            <Quiet to="/login">Back to login</Quiet>
+          </Footnote>
+        </Box>
+      </>
     );
   }
 
   return (
-    <Panel title="Take up arms" lede="An address and a password. The rest is decided in the dungeon.">
-      <Notice kind="bad">{problem}</Notice>
-      <form onSubmit={submit}>
-        <Field
-          label="Email"
-          type="email"
-          name="email"
-          autoComplete="email"
-          required
-          value={form.email}
-          onChange={change("email")}
-        />
-        <Field
-          label="Password"
-          type="password"
-          name="password"
-          autoComplete="new-password"
-          required
-          minLength={10}
-          hint="At least ten characters."
-          value={form.password}
-          onChange={change("password")}
-        />
-        <Rule />
-        <Button type="submit" disabled={busy}>
-          {busy ? "Sending" : "Sign up"}
-        </Button>
-      </form>
-      <Aside>
-        <p>
-          Already have a name here? <Quiet to="/login">Sign in</Quiet>
-        </p>
-      </Aside>
-    </Panel>
+    <>
+      <TopBar where="Create Account" />
+      <Box title="Create Account">
+        <Notice kind="bad">{problem}</Notice>
+        <form onSubmit={submit}>
+          <Field
+            label="Email"
+            type="email"
+            name="email"
+            autoComplete="email"
+            required
+            value={form.email}
+            onChange={change("email")}
+          />
+          <Field
+            label="Password"
+            type="password"
+            name="password"
+            autoComplete="new-password"
+            required
+            minLength={10}
+            hint="At least 10 characters."
+            value={form.password}
+            onChange={change("password")}
+          />
+          <Buttons>
+            <Button type="submit" disabled={busy}>
+              {busy ? "Submitting" : "Create account"}
+            </Button>
+          </Buttons>
+        </form>
+        <Footnote>
+          Already registered? <Quiet to="/login">Log in</Quiet>
+        </Footnote>
+      </Box>
+    </>
   );
 };
