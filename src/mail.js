@@ -19,8 +19,25 @@ const verificationMessage = (email, link) => ({
     "Open this to finish, and your game account will be created:",
     link,
     "",
-    `The link stops working in ${Math.round(config.verificationTtlMs / 3_600_000)} hours.`,
+    `The link stops working in ${Math.round(config.linkTtlMs / 3_600_000)} hours.`,
     "If this was not you, ignore this message. Nothing has been created yet.",
+  ].join("\n"),
+});
+
+const resetMessage = (email, link) => ({
+  to: email,
+  subject: "Reset your password",
+  text: [
+    "Somebody asked to reset the password for this address.",
+    "",
+    "Open this to choose a new one:",
+    link,
+    "",
+    `The link stops working in ${Math.round(config.linkTtlMs / 3_600_000)} hours.`,
+    "",
+    "If this was not you, ignore this message — your password has not changed.",
+    "Resetting also signs the game client out, so nobody can keep playing on a",
+    "token taken while they had access.",
   ].join("\n"),
 });
 
@@ -34,14 +51,21 @@ const verificationMessage = (email, link) => ({
 export const verificationLink = (token) =>
   `${config.publicUrl}/verify?token=${encodeURIComponent(token)}`;
 
+export const resetLink = (token) =>
+  `${config.publicUrl}/reset?token=${encodeURIComponent(token)}`;
+
 /** Writes what it would have sent. The default, and never the right one in production. */
+const notSent = (subject, email, link) =>
+  console.warn(
+    `mail: no ODW_SMTP_URL configured, not sending "${subject}" to ${email}\n      ${link}`
+  );
+
 export const logMailer = {
   async sendVerification(email, token) {
-    const { subject } = verificationMessage(email, verificationLink(token));
-    console.warn(
-      `mail: no ODW_SMTP_URL configured, not sending "${subject}" to ${email}\n` +
-        `      ${verificationLink(token)}`
-    );
+    notSent(verificationMessage(email, "").subject, email, verificationLink(token));
+  },
+  async sendPasswordReset(email, token) {
+    notSent(resetMessage(email, "").subject, email, resetLink(token));
   },
 };
 
@@ -56,6 +80,12 @@ export const createMailer = async () => {
       await transport.sendMail({
         from: config.mailFrom,
         ...verificationMessage(email, verificationLink(token)),
+      });
+    },
+    async sendPasswordReset(email, token) {
+      await transport.sendMail({
+        from: config.mailFrom,
+        ...resetMessage(email, resetLink(token)),
       });
     },
   };

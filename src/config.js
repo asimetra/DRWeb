@@ -57,10 +57,11 @@ export const loadConfig = (environment = process.env) => ({
   publicUrl: (environment.ODW_PUBLIC_URL ?? "http://127.0.0.1:3000").replace(/\/$/, ""),
 
   /**
+   * How long a mailed link lasts — confirmations and password resets alike.
    * Long enough to survive a mail sitting unread overnight, short enough that
    * a link found in an old inbox is not still a way in.
    */
-  verificationTtlMs: asInt(environment.ODW_VERIFICATION_TTL_MS, 24 * 60 * 60 * 1000),
+  linkTtlMs: asInt(environment.ODW_LINK_TTL_MS, 24 * 60 * 60 * 1000),
 
   /**
    * Unset writes the link to the log instead of sending it, which is how this

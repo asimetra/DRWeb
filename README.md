@@ -72,7 +72,7 @@ the default for the obvious reason.
 | `ODW_GAME_INTERNAL_URL` | `http://127.0.0.1:8081` | The game server's internal API |
 | `ODW_GAME_INTERNAL_TOKEN` | — | Must match the game server's `ODS_INTERNAL_TOKEN` |
 | `ODW_PUBLIC_URL` | `http://127.0.0.1:3000` | Where confirmation links point |
-| `ODW_VERIFICATION_TTL_MS` | 24 hours | How long a confirmation link lasts |
+| `ODW_LINK_TTL_MS` | 24 hours | How long a mailed link lasts — confirmation and reset alike |
 | `ODW_SMTP_URL` | — | SMTP connection string; unset logs the link instead of sending |
 | `ODW_MAIL_FROM` | `no-reply@localhost` | Sender address |
 
@@ -93,6 +93,9 @@ with it — fetch a fresh one afterwards.
 | `POST /api/verify` | Confirms the address, creates the game account, returns the client token **once** |
 | `POST /api/verify/resend` | Another link, retiring the one before it |
 | `POST /api/login` | Signs in |
+| `POST /api/password/forgot` | Mails a reset link |
+| `POST /api/password/reset` | Sets a new password, ends every session, revokes the game token |
+| `POST /api/password` | Changes a password you already know |
 | `POST /api/logout` | Ends the session |
 | `GET /api/me` | Who you are signed in as |
 | `POST /api/game-token` | A replacement client token |
@@ -122,6 +125,28 @@ Until it is confirmed, an account has no game token to ask for and
 Without `ODW_SMTP_URL` the link is written to the log rather than sent, which
 is what makes the whole flow exercisable on a laptop. Startup says so, because
 in production it means nobody but the operator can sign up.
+
+## Losing a password
+
+Resetting is what somebody does when they think another person has been in
+their account, so changing the password is the least of it. Two things go with
+it, or the reset recovers nothing:
+
+- **every web session ends**, including the intruder's;
+- **every game token is revoked**. `POST /api/game-token` hands out a
+  credential good for most of a year — anybody who reached the account could be
+  holding one, and it would outlive the password by months.
+
+The revocation happens first. If the game server cannot be reached the reset is
+refused whole and the link stays usable, because a password that has moved on
+while the old client token still plays is worse than a reset that did not
+happen. A replacement client token comes back in the response, since the one in
+the player's configuration file has just stopped working.
+
+Changing a password you already know is a different situation and behaves
+differently: other web sessions end, and the game client is left alone. Knowing
+the current password claims no compromise, and signing somebody out of the game
+for tidying up their password would be a surprise.
 
 ## Tests
 

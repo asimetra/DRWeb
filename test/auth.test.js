@@ -35,15 +35,21 @@ const fakeGame = {
   async reissueToken(accountId) {
     return { accountId, token: `${Math.floor(Date.now() / 1000) + 7200}:${"b".repeat(64)}`, expires: "later" };
   },
+  revocations: [],
   async revokeTokens(accountId) {
-    return { accountId, generation: 1 };
+    if (fakeGame.failWith) throw fakeGame.failWith;
+    fakeGame.revocations.push(accountId);
+    return { accountId, generation: fakeGame.revocations.length };
   },
 };
 
 const fakeMailer = {
   sent: [],
   async sendVerification(email, token) {
-    fakeMailer.sent.push({ email, token });
+    fakeMailer.sent.push({ email, token, kind: "verify" });
+  },
+  async sendPasswordReset(email, token) {
+    fakeMailer.sent.push({ email, token, kind: "reset" });
   },
 };
 const lastLink = () => fakeMailer.sent.at(-1);
@@ -58,6 +64,7 @@ after(async () => {
 
 beforeEach(async () => {
   fakeGame.registrations.length = 0;
+  fakeGame.revocations.length = 0;
   fakeGame.failWith = null;
   fakeMailer.sent.length = 0;
   await storage.close();
@@ -157,9 +164,10 @@ test("an expired link is refused", async () => {
   const user = await storage.findUserByEmail(credentials.email);
 
   const stale = "a-token-that-has-run-out";
-  await storage.createVerification({
+  await storage.createToken({
     userId: user.id,
     tokenHash: createHash("sha256").update(stale).digest("hex"),
+    purpose: "verify",
     expires: new Date(Date.now() - 1000),
   });
 
@@ -295,4 +303,136 @@ test("a confirmed account can replace and revoke its game token", async () => {
   const revoked = await visitor.delete("/api/game-token");
   assert.equal(revoked.statusCode, 200);
   assert.equal(revoked.json().accountId, game.accountId);
+});
+
+const newPassword = "a-brand-new-long-password";
+
+test("asking to reset sends a link, and an unknown address sends nothing", async () => {
+  await confirmed();
+  fakeMailer.sent.length = 0;
+
+  await browser().post("/api/password/forgot", { email: credentials.email });
+  assert.equal(fakeMailer.sent.length, 1);
+  assert.equal(lastLink().kind, "reset");
+
+  const unknown = await browser().post("/api/password/forgot", { email: "nobody@example.com" });
+  assert.equal(unknown.statusCode, 200);
+  assert.equal(fakeMailer.sent.length, 1, "nothing more was sent");
+});
+
+test("resetting replaces the password", async () => {
+  await confirmed();
+  await browser().post("/api/password/forgot", { email: credentials.email });
+
+  const reset = await browser().post("/api/password/reset", {
+    token: lastLink().token,
+    password: newPassword,
+  });
+  assert.equal(reset.statusCode, 200);
+
+  assert.equal((await browser().post("/api/login", credentials)).statusCode, 401);
+  assert.equal(
+    (await browser().post("/api/login", { ...credentials, password: newPassword })).statusCode,
+    200
+  );
+});
+
+/**
+ * A reset is what somebody does when they think another person has been in
+ * their account. Leaving that person's session alive would make it a gesture.
+ */
+test("resetting ends every session that was open", async () => {
+  const { visitor } = await confirmed();
+  assert.equal((await visitor.get("/api/me")).statusCode, 200);
+
+  await browser().post("/api/password/forgot", { email: credentials.email });
+  await browser().post("/api/password/reset", { token: lastLink().token, password: newPassword });
+
+  assert.equal((await visitor.get("/api/me")).statusCode, 401);
+});
+
+/**
+ * `/api/game-token` hands out a credential good for most of a year. Anybody
+ * who reached the account could hold one, and it would outlive the password by
+ * months if the reset did not revoke it.
+ */
+test("resetting revokes the game token and hands back a fresh one", async () => {
+  const { game } = await confirmed();
+  await browser().post("/api/password/forgot", { email: credentials.email });
+
+  const reset = await browser().post("/api/password/reset", {
+    token: lastLink().token,
+    password: newPassword,
+  });
+
+  assert.deepEqual(fakeGame.revocations, [game.accountId]);
+  assert.match(reset.json().game.token, /^\d+:[0-9a-f]{64}$/);
+});
+
+/**
+ * Revoking goes first for this reason: a password that has moved on while the
+ * old client token still plays is worse than a reset that did not happen.
+ */
+test("a reset that cannot reach the game server changes nothing", async () => {
+  await confirmed();
+  await browser().post("/api/password/forgot", { email: credentials.email });
+  const token = lastLink().token;
+
+  fakeGame.failWith = new GameServerError(503, "game server unreachable");
+  const refused = await browser().post("/api/password/reset", { token, password: newPassword });
+  assert.equal(refused.statusCode, 502);
+
+  // The old password still works, and the link has not been spent.
+  assert.equal((await browser().post("/api/login", credentials)).statusCode, 200);
+
+  fakeGame.failWith = null;
+  const retried = await browser().post("/api/password/reset", { token, password: newPassword });
+  assert.equal(retried.statusCode, 200);
+});
+
+/** Purpose is checked on redemption, not only on lookup. */
+test("a confirmation link cannot be spent on the password route", async () => {
+  const visitor = browser();
+  await visitor.post("/api/register", credentials);
+
+  const response = await visitor.post("/api/password/reset", {
+    token: lastLink().token,
+    password: newPassword,
+  });
+  assert.equal(response.statusCode, 400);
+});
+
+test("changing a password needs the current one", async () => {
+  const { visitor } = await confirmed();
+
+  const wrong = await visitor.post("/api/password", {
+    currentPassword: "not-the-password",
+    newPassword,
+  });
+  assert.equal(wrong.statusCode, 401);
+
+  const right = await visitor.post("/api/password", {
+    currentPassword: credentials.password,
+    newPassword,
+  });
+  assert.equal(right.statusCode, 200);
+});
+
+/**
+ * Knowing the current password means nothing is claimed to be compromised, so
+ * the game client is left alone — signing somebody out of the game for tidying
+ * up their password would be a surprise.
+ */
+test("changing a password ends other sessions but not this one, and spares the game", async () => {
+  const { visitor } = await confirmed();
+
+  const elsewhere = browser();
+  await elsewhere.post("/api/login", credentials);
+  assert.equal((await elsewhere.get("/api/me")).statusCode, 200);
+
+  await visitor.post("/api/password", { currentPassword: credentials.password, newPassword });
+
+  assert.equal((await visitor.get("/api/me")).statusCode, 200, "the browser that did it stays");
+  assert.equal((await elsewhere.get("/api/me")).statusCode, 401, "the other one does not");
+  assert.deepEqual(fakeGame.revocations, [], "the game client is not touched");
 });

@@ -1,6 +1,6 @@
-import { createHash, randomBytes } from "node:crypto";
 import * as storage from "../storage/index.js";
 import { config } from "../config.js";
+import { PURPOSE, digestOf, mintToken } from "../tokens.js";
 import { EmailTaken } from "../storage/errors.js";
 import { GameServerError } from "../game.js";
 import { checkPassword, hashPassword, passwordProblem } from "../passwords.js";
@@ -33,28 +33,42 @@ const emailProblem = (email) => {
 };
 
 /**
- * A verification token, and the digest the table holds instead of it.
+ * Mints a link, retires the ones before it, and sends it.
  *
- * 32 random bytes, so guessing is not a threat model and a plain SHA-256 is
- * the right hash — argon2 exists to slow down working through a small set of
- * likely passwords, and there is no such set here. Hashing at all is about the
- * table leaking: a stored token is a working link for somebody who has proved
- * nothing yet.
+ * Retiring first is what makes "I asked again" mean the earlier mail stops
+ * working — otherwise every link ever sent stays live until it expires, and a
+ * password reset is only as strong as the oldest mail in the inbox.
  */
-const mintVerificationToken = () => randomBytes(32).toString("base64url");
-const digestOf = (token) => createHash("sha256").update(token).digest("hex");
-
-const sendVerification = async (app, user) => {
-  // A resend retires the earlier links, so an old mail stops working.
-  await storage.deleteUserVerifications(user.id);
-  const token = mintVerificationToken();
-  await storage.createVerification({
+const sendLink = async (app, user, purpose) => {
+  await storage.deleteUserTokens(user.id, purpose);
+  const token = mintToken();
+  await storage.createToken({
     userId: user.id,
     tokenHash: digestOf(token),
-    expires: new Date(Date.now() + config.verificationTtlMs),
+    purpose,
+    expires: new Date(Date.now() + config.linkTtlMs),
   });
-  await app.mailer.sendVerification(user.email, token);
+
+  if (purpose === PURPOSE.VERIFY) await app.mailer.sendVerification(user.email, token);
+  else await app.mailer.sendPasswordReset(user.email, token);
 };
+
+/** The user a link names, or null — the caller answers the same way for both. */
+const redeem = async (token, purpose) => {
+  if (typeof token !== "string" || !token) return null;
+  const hash = digestOf(token);
+  const found = await storage.findToken(hash, purpose);
+  if (!found) return null;
+
+  const user = await storage.findUserById(found.userId);
+  if (!user) {
+    await storage.consumeToken(hash);
+    return null;
+  }
+  return { user, hash };
+};
+
+const BAD_LINK = "that link is not valid, or has expired";
 
 /** What the browser is allowed to know about the person it is signed in as. */
 const publicUser = (user) => ({
@@ -131,7 +145,7 @@ export const authRoutes = async (app) => {
         throw failure;
       }
 
-      await sendVerification(app, user);
+      await sendLink(app, user, PURPOSE.VERIFY);
       request.session.userId = user.id;
 
       request.log.info(`registered ${user.email}, awaiting confirmation`);
@@ -155,26 +169,13 @@ export const authRoutes = async (app) => {
       config: { rateLimit: { max: 20, timeWindow: "10 minutes" } },
     },
     async (request, reply) => {
-      const { token } = request.body ?? {};
-      if (typeof token !== "string" || !token) {
-        return reply.code(400).send({ error: "a verification token is required" });
-      }
-
-      const hash = digestOf(token);
-      const found = await storage.findVerification(hash);
-      if (!found) {
-        return reply.code(400).send({ error: "that link is not valid, or has expired" });
-      }
-
-      const user = await storage.findUserById(found.userId);
-      if (!user) {
-        await storage.consumeVerification(hash);
-        return reply.code(400).send({ error: "that link is not valid, or has expired" });
-      }
+      const redeemed = await redeem(request.body?.token, PURPOSE.VERIFY);
+      if (!redeemed) return reply.code(400).send({ error: BAD_LINK });
+      const { user, hash } = redeemed;
 
       // Already done, and the link clicked twice. Not an error worth showing.
       if (user.account_id) {
-        await storage.consumeVerification(hash);
+        await storage.consumeToken(hash);
         return { user: publicUser(user), game: null };
       }
 
@@ -191,7 +192,7 @@ export const authRoutes = async (app) => {
 
       await storage.linkAccount(user.id, account.accountId);
       await storage.markVerified(user.id);
-      await storage.consumeVerification(hash);
+      await storage.consumeToken(hash);
 
       // Confirming is proof enough to be signed in; the link may well have
       // been opened somewhere the sign-up session never reached.
@@ -227,7 +228,7 @@ export const authRoutes = async (app) => {
       const { email } = request.body ?? {};
       if (typeof email === "string" && !emailProblem(email)) {
         const user = await storage.findUserByEmail(email);
-        if (user && !user.account_id) await sendVerification(app, user);
+        if (user && !user.account_id) await sendLink(app, user, PURPOSE.VERIFY);
       }
       return { ok: true };
     }
@@ -266,6 +267,140 @@ export const authRoutes = async (app) => {
       await storage.touchLogin(user.id);
 
       return { user: publicUser(user) };
+    }
+  );
+
+  /**
+   * Asking for a reset link. Answers the same whether or not the address is
+   * one this server has heard of, for the reason the sign-in route gives.
+   */
+  app.post(
+    "/api/password/forgot",
+    {
+      onRequest: app.csrfProtection,
+      config: { rateLimit: { max: 3, timeWindow: "10 minutes" } },
+    },
+    async (request) => {
+      const { email } = request.body ?? {};
+      if (typeof email === "string" && !emailProblem(email)) {
+        const user = await storage.findUserByEmail(email);
+        if (user) {
+          await sendLink(app, user, PURPOSE.RESET);
+          request.log.info(`sent a reset link to user ${user.id}`);
+        }
+      }
+      return { ok: true };
+    }
+  );
+
+  /**
+   * Choosing a new password, and taking the account back with it.
+   *
+   * A reset is what somebody does when they think another person has been in
+   * their account, so changing the password is the least of it. Two things
+   * have to go with it or the reset does not actually recover anything:
+   *
+   *   - every web session ends, including the intruder's;
+   *   - every game token is revoked. `POST /api/game-token` hands out a
+   *     credential good for most of a year, so anybody who reached the account
+   *     could have taken one, and it would outlive the password by months.
+   *
+   * The revocation goes first. If the game server cannot be reached, nothing
+   * here changes and the link stays usable — better than a password that has
+   * moved on while the old client token still plays.
+   */
+  app.post(
+    "/api/password/reset",
+    {
+      onRequest: app.csrfProtection,
+      config: { rateLimit: { max: 10, timeWindow: "10 minutes" } },
+    },
+    async (request, reply) => {
+      const problem = passwordProblem(request.body?.password);
+      if (problem) return reply.code(400).send({ error: problem });
+
+      const redeemed = await redeem(request.body?.token, PURPOSE.RESET);
+      if (!redeemed) return reply.code(400).send({ error: BAD_LINK });
+      const { user, hash } = redeemed;
+
+      if (user.account_id) {
+        try {
+          await app.game.revokeTokens(user.account_id);
+        } catch (failure) {
+          if (failure instanceof GameServerError) {
+            request.log.error(`reset: could not revoke game tokens: ${failure.message}`);
+            return reply
+              .code(502)
+              .send({ error: "the game server could not be reached — nothing was changed" });
+          }
+          throw failure;
+        }
+      }
+
+      await storage.setPassword(user.id, await hashPassword(request.body.password));
+      await storage.destroyUserSessions(user.id);
+      await storage.consumeToken(hash);
+
+      /**
+       * A replacement client token, because the one in their configuration
+       * file has just stopped working and this is where they are standing. A
+       * failure here is not worth undoing the reset over — `/api/game-token`
+       * offers the same thing.
+       */
+      let game = null;
+      if (user.account_id) {
+        try {
+          const issued = await app.game.reissueToken(user.account_id);
+          game = { accountId: issued.accountId, token: issued.token, expires: issued.expires };
+        } catch (failure) {
+          if (!(failure instanceof GameServerError)) throw failure;
+          request.log.error(`reset: could not issue a replacement token: ${failure.message}`);
+        }
+      }
+
+      await request.session.regenerate();
+      request.session.userId = user.id;
+
+      request.log.info(`reset the password for user ${user.id}`);
+      return { user: publicUser(user), game };
+    }
+  );
+
+  /**
+   * Changing a password you already know, which is a different situation.
+   *
+   * Knowing the current one means nothing is claimed to be compromised, so the
+   * game client is left alone — signing somebody out of the game for tidying
+   * up their password would be a surprise. Other web sessions still end, since
+   * that is the one thing a password change is expected to do.
+   */
+  app.post(
+    "/api/password",
+    {
+      onRequest: [requireSession, app.csrfProtection],
+      config: { rateLimit: { max: 10, timeWindow: "1 hour" } },
+    },
+    async (request, reply) => {
+      const { currentPassword, newPassword } = request.body ?? {};
+      const problem = passwordProblem(newPassword);
+      if (problem) return reply.code(400).send({ error: problem });
+
+      if (typeof currentPassword !== "string" ||
+          !(await checkPassword(currentPassword, request.user.password_hash))) {
+        request.log.warn(`password change refused for user ${request.user.id}`);
+        return reply.code(401).send({ error: "wrong password" });
+      }
+
+      await storage.setPassword(request.user.id, await hashPassword(newPassword));
+      await storage.destroyUserSessions(request.user.id);
+
+      // Ended along with the rest, then started again here: the person who
+      // just proved the old password keeps the browser they did it in.
+      await request.session.regenerate();
+      request.session.userId = request.user.id;
+
+      request.log.info(`changed the password for user ${request.user.id}`);
+      return { ok: true };
     }
   );
 

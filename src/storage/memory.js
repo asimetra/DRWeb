@@ -10,7 +10,7 @@ import { EmailTaken } from "./errors.js";
  */
 const users = new Map();
 const sessions = new Map();
-const verifications = new Map();
+const tokens = new Map();
 let nextUserId = 1;
 
 const folded = (email) => String(email).trim().toLowerCase();
@@ -89,29 +89,34 @@ export const markVerified = async (id) => {
   if (user) user.verified_at = new Date();
 };
 
-export const createVerification = async ({ userId, tokenHash, expires }) => {
-  verifications.set(tokenHash, { userId: Number(userId), expires });
+export const createToken = async ({ userId, tokenHash, purpose, expires }) => {
+  tokens.set(tokenHash, { userId: Number(userId), purpose, expires });
 };
 
-export const findVerification = async (tokenHash) => {
-  const row = verifications.get(tokenHash);
-  if (!row) return null;
+export const findToken = async (tokenHash, purpose) => {
+  const row = tokens.get(tokenHash);
+  if (!row || row.purpose !== purpose) return null;
   if (row.expires.getTime() <= Date.now()) {
-    verifications.delete(tokenHash);
+    tokens.delete(tokenHash);
     return null;
   }
   return { userId: row.userId };
 };
 
-export const consumeVerification = async (tokenHash) => {
-  verifications.delete(tokenHash);
+export const consumeToken = async (tokenHash) => {
+  tokens.delete(tokenHash);
 };
 
-/** A resend retires the earlier links, so an old mail stops working. */
-export const deleteUserVerifications = async (userId) => {
-  for (const [key, row] of verifications) {
-    if (row.userId === Number(userId)) verifications.delete(key);
+/** Asking for a new link retires the earlier ones, so an old mail stops working. */
+export const deleteUserTokens = async (userId, purpose) => {
+  for (const [key, row] of tokens) {
+    if (row.userId === Number(userId) && row.purpose === purpose) tokens.delete(key);
   }
+};
+
+export const setPassword = async (id, passwordHash) => {
+  const user = users.get(Number(id));
+  if (user) user.password_hash = passwordHash;
 };
 
 export const ping = async () => {};
@@ -119,6 +124,6 @@ export const ping = async () => {};
 export const close = async () => {
   users.clear();
   sessions.clear();
-  verifications.clear();
+  tokens.clear();
   nextUserId = 1;
 };

@@ -52,23 +52,26 @@ CREATE INDEX IF NOT EXISTS sessions_user ON web.sessions(user_id);
 CREATE INDEX IF NOT EXISTS sessions_expires ON web.sessions(expires);
 
 /*
- * Outstanding "click this to prove the address is yours" links.
+ * Single-use links sent to an address: confirming a sign-up, and resetting a
+ * password. One table with a purpose rather than two identical ones, because
+ * everything about them is the same — minted at 32 random bytes, held as a
+ * digest, spent on use, expired on a clock.
  *
- * The token is stored as a digest, not as itself. Anybody reading this table
- * would otherwise hold a working link for every address waiting on one, and
- * these are handed out precisely to people who have not proved anything yet.
- * A plain SHA-256 is enough where a password would need argon2: the token is
- * 32 random bytes, so there is no small set of likely values to work through.
+ * The digest and not the token, because anybody reading this table would
+ * otherwise hold a working link for every address currently waiting on one.
+ * A plain SHA-256 is enough where a password needs argon2: a slow hash exists
+ * to defend a small set of likely values, and 32 random bytes are not that.
  *
- * One row per outstanding request, deleted when it is used. A resend clears
- * the account's earlier rows, so an old link in an old mail stops working the
- * moment a new one is asked for.
+ * `purpose` is checked on redemption as well as looked up, so a confirmation
+ * link cannot be posted to the password route and spent there.
  */
-CREATE TABLE IF NOT EXISTS web.email_verifications (
+CREATE TABLE IF NOT EXISTS web.tokens (
     token_hash TEXT        PRIMARY KEY,
     user_id    BIGINT      NOT NULL REFERENCES web.users(id) ON DELETE CASCADE,
+    purpose    TEXT        NOT NULL CHECK (purpose IN ('verify', 'reset')),
     expires    TIMESTAMPTZ NOT NULL,
     created    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS email_verifications_user ON web.email_verifications(user_id);
+CREATE INDEX IF NOT EXISTS tokens_user ON web.tokens(user_id, purpose);
+CREATE INDEX IF NOT EXISTS tokens_expires ON web.tokens(expires);
