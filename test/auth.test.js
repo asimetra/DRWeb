@@ -21,8 +21,24 @@ const storage = await import("../src/storage/index.js");
 const fakeGame = {
   registrations: [],
   failWith: null,
+  /*
+   * Names are the game server's to rule on — shape and uniqueness both — so the
+   * double answers the way it does: free unless somebody already registered it.
+   */
+  async checkName(name) {
+    if (fakeGame.failWith) throw fakeGame.failWith;
+    const wanted = String(name ?? "").trim();
+    if (wanted.length < 3) return { name: wanted, free: false, reason: "bad_name", error: "a name is 3 to 16 characters" };
+    const taken = fakeGame.registrations.some((one) => one.name?.toLowerCase() === wanted.toLowerCase());
+    return { name: wanted, free: !taken, ...(taken ? { reason: "name_taken" } : {}) };
+  },
   async registerAccount({ name } = {}) {
     if (fakeGame.failWith) throw fakeGame.failWith;
+    /* The real server refuses a taken name with a 409 carrying a reason, and
+       this test file turns on that refusal — so the double has to make it. */
+    if (name && fakeGame.registrations.some((one) => one.name?.toLowerCase() === name.toLowerCase())) {
+      throw new GameServerError(409, `${name} is already taken`);
+    }
     const accountId = 1_000_000_001 + fakeGame.registrations.length;
     fakeGame.registrations.push({ accountId, name });
     return {
@@ -101,7 +117,7 @@ const browser = () => {
   };
 };
 
-const credentials = { email: "player@example.com", password: "a-long-enough-password" };
+const credentials = { email: "player@example.com", password: "a-long-enough-password", name: "Grimwald" };
 
 /** Signed up and confirmed, for the tests whose subject is what comes after. */
 const confirmed = async () => {
@@ -241,7 +257,7 @@ test("a second sign-up with the same address is refused", async () => {
 });
 
 test("a short password is refused before anything is written", async () => {
-  const response = await browser().post("/api/register", { email: "x@example.com", password: "short" });
+  const response = await browser().post("/api/register", { email: "x@example.com", password: "short", name: "Sable" });
   assert.equal(response.statusCode, 400);
   assert.equal(fakeMailer.sent.length, 0);
 });
@@ -481,4 +497,73 @@ test("a character panel survives the game server being down", async () => {
 
   assert.equal(response.statusCode, 200);
   assert.deepEqual(response.json(), { reachable: false });
+});
+
+/* ------------------------------------------------------------------ names - */
+
+/**
+ * A name is chosen at sign-up, not at confirmation.
+ *
+ * The link is opened from an email, quite possibly in a different browser to
+ * the one that filled the form in — so the name has to travel on the user row
+ * rather than in the session or the request that redeems the link.
+ */
+test("the name chosen at sign-up is the one the account gets", async () => {
+  const visitor = browser();
+  await visitor.post("/api/register", { ...credentials, name: "Sable" });
+  await visitor.post("/api/verify", { token: fakeMailer.sent.at(-1).token });
+
+  assert.equal(fakeGame.registrations.at(-1).name, "Sable");
+});
+
+test("a name somebody already has is refused at the form", async () => {
+  const first = browser();
+  await first.post("/api/register", { ...credentials, name: "Sable" });
+  await first.post("/api/verify", { token: fakeMailer.sent.at(-1).token });
+
+  const second = await browser().post("/api/register", {
+    email: "other@example.com",
+    password: "a-long-enough-password",
+    name: "sable",
+  });
+
+  assert.equal(second.statusCode, 409);
+  assert.equal(second.json().reason, "name_taken");
+});
+
+test("a name of the wrong shape is refused before an account exists", async () => {
+  const response = await browser().post("/api/register", { ...credentials, name: "no" });
+
+  assert.equal(response.statusCode, 409);
+  assert.equal(response.json().reason, "bad_name");
+  assert.equal(fakeGame.registrations.length, 0, "nothing was created");
+});
+
+/**
+ * The gap the availability check cannot close.
+ *
+ * A name is free when it is asked for and somebody else takes it before the
+ * address is confirmed. The game server refuses at that point — and the link
+ * has to survive it, or the answer to "somebody took your name" would be
+ * "and now you cannot sign up at all".
+ */
+test("a name taken in the meantime leaves the link usable", async () => {
+  const visitor = browser();
+  await visitor.post("/api/register", { ...credentials, name: "Sable" });
+  const link = fakeMailer.sent.at(-1).token;
+
+  // Somebody else gets there first.
+  const quicker = browser();
+  await quicker.post("/api/register", { email: "quick@example.com", password: "a-long-enough-password", name: "Mox" });
+  await quicker.post("/api/verify", { token: fakeMailer.sent.at(-1).token });
+  fakeGame.registrations.push({ accountId: 999, name: "Sable" });
+
+  const collided = await visitor.post("/api/verify", { token: link });
+  assert.equal(collided.statusCode, 409);
+  assert.equal(collided.json().reason, "name");
+
+  // The same link, with another name, still works.
+  const second = await visitor.post("/api/verify", { token: link, name: "Ivory" });
+  assert.equal(second.statusCode, 200);
+  assert.equal(fakeGame.registrations.at(-1).name, "Ivory");
 });

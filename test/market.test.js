@@ -34,8 +34,20 @@ const fakeGame = {
   calls: [],
   refuseWith: null,
   next: 1_000_000_001,
+  names: new Set(),
 
-  async registerAccount() {
+  /** Names are the game server's to rule on; the double just remembers them. */
+  async checkName(name) {
+    const wanted = String(name ?? "").trim();
+    if (wanted.length < 3) {
+      return { name: wanted, free: false, reason: "bad_name", error: "a name is 3 to 16 characters" };
+    }
+    const key = wanted.toLowerCase();
+    return { name: wanted, free: !fakeGame.names.has(key), ...(fakeGame.names.has(key) ? { reason: "name_taken" } : {}) };
+  },
+
+  async registerAccount({ name } = {}) {
+    if (name) fakeGame.names.add(String(name).toLowerCase());
     const accountId = fakeGame.next++;
     fakeGame.accounts.set(accountId, { id: accountId, basic_currency: 1000, account_items: [] });
     return { accountId, token: `${Math.floor(Date.now() / 1000) + 3600}:${"a".repeat(64)}` };
@@ -101,6 +113,7 @@ beforeEach(async () => {
   fakeGame.accounts.clear();
   fakeGame.calls.length = 0;
   fakeGame.refuseWith = null;
+  fakeGame.names.clear();
   fakeGame.next = 1_000_000_001;
   fakeMailer.sent.length = 0;
   await storage.close();
@@ -132,9 +145,14 @@ const browser = () => {
 };
 
 /** A signed-in, confirmed player holding the weapons given. */
+let named = 0;
 const player = async (email, items = []) => {
   const visitor = browser();
-  await visitor.post("/api/register", { email, password: "a-long-enough-password" });
+  await visitor.post("/api/register", {
+    email,
+    password: "a-long-enough-password",
+    name: `Player${++named}`,
+  });
   const { game } = (await visitor.post("/api/verify", { token: fakeMailer.sent.at(-1).token })).json();
   fakeGame.accounts.get(game.accountId).account_items = items;
   return { visitor, accountId: game.accountId };
@@ -205,7 +223,11 @@ test("anybody may look, only a player may take part", async () => {
 /** Signed up but not confirmed: there is no account to sell out of yet. */
 test("an unconfirmed account is told to confirm rather than refused as a stranger", async () => {
   const visitor = browser();
-  await visitor.post("/api/register", { email: "new@example.com", password: "a-long-enough-password" });
+  await visitor.post("/api/register", {
+    email: "new@example.com",
+    password: "a-long-enough-password",
+    name: "Unconfirmed",
+  });
 
   const refused = await visitor.post("/api/market", { itemId: 1, price: 1 });
   assert.equal(refused.statusCode, 409);

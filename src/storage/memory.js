@@ -16,7 +16,7 @@ let nextUserId = 1;
 const folded = (email) => String(email).trim().toLowerCase();
 const copy = (user) => (user ? { ...user } : null);
 
-export const createUser = async ({ email, passwordHash }) => {
+export const createUser = async ({ email, passwordHash, wantedName = null }) => {
   for (const user of users.values()) {
     if (folded(user.email) === folded(email)) throw new EmailTaken(email);
   }
@@ -25,6 +25,7 @@ export const createUser = async ({ email, passwordHash }) => {
     email: String(email).trim(),
     password_hash: passwordHash,
     account_id: null,
+    wanted_name: wantedName,
     verified_at: null,
     created: new Date(),
     last_login: null,

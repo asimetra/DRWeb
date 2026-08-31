@@ -24,13 +24,13 @@ const connect = () => {
 /** Postgres' unique-violation class, which is how a duplicate address arrives. */
 const UNIQUE_VIOLATION = "23505";
 
-export const createUser = async ({ email, passwordHash }) => {
+export const createUser = async ({ email, passwordHash, wantedName = null }) => {
   try {
     const { rows } = await connect().query(
-      `INSERT INTO web.users (email, password_hash)
-       VALUES ($1, $2)
-       RETURNING id, email, password_hash, account_id, verified_at, created, last_login`,
-      [String(email).trim(), passwordHash]
+      `INSERT INTO web.users (email, password_hash, wanted_name)
+       VALUES ($1, $2, $3)
+       RETURNING id, email, password_hash, account_id, wanted_name, verified_at, created, last_login`,
+      [String(email).trim(), passwordHash, wantedName]
     );
     return rows[0];
   } catch (problem) {
@@ -41,7 +41,7 @@ export const createUser = async ({ email, passwordHash }) => {
 
 export const findUserByEmail = async (email) => {
   const { rows } = await connect().query(
-    `SELECT id, email, password_hash, account_id, verified_at, created, last_login
+    `SELECT id, email, password_hash, account_id, wanted_name, verified_at, created, last_login
        FROM web.users WHERE lower(email) = lower($1)`,
     [String(email).trim()]
   );
@@ -50,7 +50,7 @@ export const findUserByEmail = async (email) => {
 
 export const findUserById = async (id) => {
   const { rows } = await connect().query(
-    `SELECT id, email, password_hash, account_id, verified_at, created, last_login
+    `SELECT id, email, password_hash, account_id, wanted_name, verified_at, created, last_login
        FROM web.users WHERE id = $1`,
     [Number(id)]
   );
@@ -59,7 +59,7 @@ export const findUserById = async (id) => {
 
 export const findUserByAccountId = async (accountId) => {
   const { rows } = await connect().query(
-    `SELECT id, email, password_hash, account_id, verified_at, created, last_login
+    `SELECT id, email, password_hash, account_id, wanted_name, verified_at, created, last_login
        FROM web.users WHERE account_id = $1`,
     [Number(accountId)]
   );

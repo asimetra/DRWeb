@@ -120,6 +120,7 @@ with it — fetch a fresh one afterwards.
 | `GET /api/server` | The address a player puts in their client. **Open** |
 | `GET /api/leaderboards/:metric` | Standings, cached 15s. **Open** |
 | `GET /api/csrf` | A CSRF token, and the session that carries it |
+| `GET /api/names/:name` | Whether a character name may be had |
 | `POST /api/register` | Creates a user and mails a confirmation link. No game account yet |
 | `POST /api/verify` | Confirms the address, creates the game account, returns the client token **once** |
 | `POST /api/verify/resend` | Another link, retiring the one before it |

@@ -96,15 +96,20 @@ export const Standings = ({ metric, limit = 20, scope = {}, onCount }) => {
                 Who set it, and what they set it on. The hero is the game
                 server's answer, carried on the standing — a time belongs to
                 the hero who ran it, whatever that player is playing now.
+
+                No account id anywhere. It is the number the client
+                authenticates with, and a name is unique now, so it identifies
+                somebody without it. A standing set before the hero was recorded
+                shows nothing rather than falling back to the number.
               */}
               <td>
                 <span className="who">
                   <Portrait hero={entry.hero} />
                   <span>
                     <span className="name">{entry.name || "unnamed"}</span>
-                    <span className="who__hero who__hero--row">
-                      {entry.hero ? entry.hero.name : `account ${entry.account_id}`}
-                    </span>
+                    {entry.hero ? (
+                      <span className="who__hero who__hero--row">{entry.hero.name}</span>
+                    ) : null}
                   </span>
                 </span>
               </td>

@@ -59,6 +59,8 @@ const call = async (method, path, body) => {
 export const api = {
   me: () => call("GET", "/api/me"),
   register: (body) => call("POST", "/api/register", body),
+  /** Whether a character name may be had. The rules are the game server's. */
+  checkName: (name) => call("GET", `/api/names/${encodeURIComponent(name)}`),
   verify: (token) => call("POST", "/api/verify", { token }),
   resendVerification: (email) => call("POST", "/api/verify/resend", { email }),
   login: (body) => call("POST", "/api/login", body),

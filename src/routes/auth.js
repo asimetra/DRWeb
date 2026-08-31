@@ -110,6 +110,27 @@ export const authRoutes = async (app) => {
   app.get("/api/csrf", async (request, reply) => ({ csrfToken: reply.generateCsrf() }));
 
   /**
+   * Whether a name may be had, for a sign-up form to say so as it is typed.
+   *
+   * Passed straight through: both the rules and the answer are the game
+   * server's, so this side holds no second opinion about what a name is. Rate
+   * limited because it answers a question about other people's names and an
+   * unlimited one is a way to walk the roster.
+   */
+  app.get(
+    "/api/names/:name",
+    { config: { rateLimit: { max: 60, timeWindow: "1 minute" } } },
+    async (request, reply) => {
+      try {
+        return await app.game.checkName(request.params.name);
+      } catch (failure) {
+        if (!(failure instanceof GameServerError)) throw failure;
+        return reply.code(502).send({ error: "the game server is not answering" });
+      }
+    }
+  );
+
+  /**
    * Registering, which now creates a user and nothing else.
    *
    * The game account waits until the address has been proved. Minting it here
@@ -128,15 +149,42 @@ export const authRoutes = async (app) => {
       config: { rateLimit: { max: 5, timeWindow: "10 minutes" } },
     },
     async (request, reply) => {
-      const { email, password } = request.body ?? {};
+      const { email, password, name } = request.body ?? {};
       const problem = emailProblem(email) ?? passwordProblem(password);
       if (problem) return reply.code(400).send({ error: problem });
+
+      /*
+       * The name is settled here so somebody hears "that one is taken" at the
+       * form rather than after a round trip through their email — but what a
+       * name may be, and whether this one is free, are both the game server's
+       * answer. Asking it keeps one definition of a name instead of a copy here
+       * that drifts away from it.
+       *
+       * It is advice, not a reservation. Between now and confirming, somebody
+       * else may take it; the game server refuses then and /api/verify asks for
+       * another.
+       */
+      let wantedName;
+      try {
+        const verdict = await app.game.checkName(name ?? "");
+        if (!verdict.free) {
+          return reply
+            .code(409)
+            .send({ error: verdict.error ?? "that name is taken", reason: verdict.reason });
+        }
+        wantedName = verdict.name;
+      } catch (failure) {
+        if (!(failure instanceof GameServerError)) throw failure;
+        request.log.error(`register: could not check a name: ${failure.message}`);
+        return reply.code(502).send({ error: "the game server is not answering" });
+      }
 
       let user;
       try {
         user = await storage.createUser({
           email,
           passwordHash: await hashPassword(password),
+          wantedName,
         });
       } catch (failure) {
         if (failure instanceof EmailTaken) {
@@ -179,15 +227,31 @@ export const authRoutes = async (app) => {
         return { user: publicUser(user), game: null };
       }
 
+      /*
+       * The name chosen at sign-up, unless this request carries a replacement.
+       *
+       * A replacement is how the collision below is recovered from: the name
+       * was free when it was asked for and somebody took it in the meantime, so
+       * the confirmation page asks for another and posts the same link again.
+       */
       let account;
       try {
-        account = await app.game.registerAccount({ name: request.body?.name?.trim() });
+        account = await app.game.registerAccount({
+          name: request.body?.name?.trim() || user.wanted_name || undefined,
+        });
       } catch (failure) {
-        if (failure instanceof GameServerError) {
-          request.log.error(`verify: game server refused: ${failure.message}`);
-          return reply.code(502).send({ error: "the game server could not create an account" });
+        if (!(failure instanceof GameServerError)) throw failure;
+        /*
+         * A refused name is the one failure here the player can do something
+         * about, so it is not flattened into "the game server could not". The
+         * link is deliberately left unspent — they need it to try again.
+         */
+        if (failure.status === 409) {
+          request.log.info(`verify: name refused — ${failure.message}`);
+          return reply.code(409).send({ error: failure.message, reason: "name" });
         }
-        throw failure;
+        request.log.error(`verify: game server refused: ${failure.message}`);
+        return reply.code(502).send({ error: "the game server could not create an account" });
       }
 
       await storage.linkAccount(user.id, account.accountId);

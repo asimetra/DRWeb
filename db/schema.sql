@@ -24,6 +24,11 @@ CREATE TABLE IF NOT EXISTS web.users (
     email         TEXT        NOT NULL,
     password_hash TEXT        NOT NULL,
     account_id    BIGINT      UNIQUE REFERENCES public.accounts(id) ON DELETE SET NULL,
+    -- The name asked for at sign-up, held until the address is confirmed and
+    -- the game account is actually made. It is not unique here: the game server
+    -- owns names and settles collisions, and a second opinion in this table
+    -- would be one that could disagree with it.
+    wanted_name   TEXT,
     verified_at   TIMESTAMPTZ,
     created       TIMESTAMPTZ NOT NULL DEFAULT now(),
     last_login    TIMESTAMPTZ

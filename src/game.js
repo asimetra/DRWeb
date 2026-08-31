@@ -58,6 +58,17 @@ const call = async (method, path, body) => {
 export const registerAccount = ({ name } = {}) =>
   call("POST", "/internal/v1/accounts", name === undefined ? {} : { name });
 
+/**
+ * Whether a name is free, so a sign-up form can say so while somebody types.
+ *
+ * Advice rather than a reservation — the game server settles it when the
+ * account is actually made — and the shape rules come back from there too, so
+ * there is one definition of what a name may be rather than one here and one
+ * there that drift apart.
+ */
+export const checkName = (name) =>
+  call("GET", `/internal/v1/names/${encodeURIComponent(name)}`);
+
 export const readAccount = (accountId) =>
   call("GET", `/internal/v1/accounts/${Number(accountId)}`);
 

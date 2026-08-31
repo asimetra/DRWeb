@@ -146,7 +146,7 @@ export const Market = () => {
                       <td>
                         <Weapon listing={listing} />
                       </td>
-                      <td>{mine ? <em>you</em> : listing.seller_name || listing.seller_id}</td>
+                      <td>{mine ? <em>you</em> : listing.seller_name}</td>
                       <td className="table__num">
                         <Gold>{listing.price}</Gold>
                       </td>
