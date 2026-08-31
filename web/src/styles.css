@@ -1,106 +1,158 @@
 /*
- * Two columns, framed boxes, striped tables.
+ * Two columns, framed boxes, striped tables — over the game's own art.
  *
- * The shape older game sites settled on, and settled on for a reason: the left
- * column holds the things you always want reachable — who you are signed in
- * as, and where you can go — so the main column is never spent on navigation
- * and a signed-out visitor always has the way in on screen.
+ * The shape is the one this file already had, and it was right: the left column
+ * holds who you are and where you can go, so the main column is never spent on
+ * navigation and a signed-out visitor always has the way in on screen. Every box
+ * is a frame with a title bar, and one repeated device is what makes a page of
+ * unlike things read as one site. None of that changed.
  *
- * The chrome is a band. Every box is a coloured frame with a lighter panel set
- * into it and a title bar across the top, and that one repeated device is what
- * makes a page of unlike things read as one site. Tables are the panel rather
- * than something laid inside it: flush to the frame, header bar in the frame's
- * own colour, rows striped.
+ * What changed is the light it happens in. Parchment on cream is a fine old-web
+ * look and belongs to no particular game. This is the dungeon's own loading art,
+ * greyed and darkened, with the chrome sitting in the same warm dark rather than
+ * on top of it — and the only saturated thing on the page is the game's rarity
+ * ladder, which a player reads as meaning before they read it as colour.
+ *
+ * Three things come from the game, and being faithful about them costs nothing:
+ *   ground.jpg     a dungeon's loading art, desaturated in processing
+ *   display.woff2  the client's own headline face
+ *   the ladder     TextColor / GlowColor straight out of the Rarity table
  */
 
+/*
+ * Letters only — the face carries no digits and no punctuation, so anything
+ * with a number in it would break mid-word into the fallback. Headings and
+ * labels; never data.
+ */
+@font-face {
+  font-family: "Deeds Display";
+  src: url("/display.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+
 :root {
-  --outside: #1a1712;
-  --outside-dark: #0d0b08;
+  /*
+   * Warm dark rather than neutral dark. The blacks lean brown and every rule is
+   * a low-alpha gold, so the chrome sits inside the darkness instead of being an
+   * accent laid over grey. That is the whole difference between belonging and
+   * being a dashboard with a picture behind it.
+   */
+  --outside: #0b0906;
+  --outside-dark: #060504;
 
-  /* The band every box is made of, and the bar across its head. */
-  --frame: #5d4a2c;
-  --frame-dark: #3a2d19;
-  --frame-lit: #7a6339;
+  --frame: rgba(168, 143, 95, 0.20);
+  --frame-dark: rgba(190, 160, 105, 0.32);
+  --frame-lit: rgba(206, 177, 120, 0.16);
 
-  --page: #f2e6cd;
-  --page-alt: #e2cfab;
-  --page-lit: #f9f2e2;
-  --page-sunk: #d6c19b;
+  --page: rgba(12, 10, 7, 0.86);
+  --page-alt: rgba(168, 143, 95, 0.055);
+  --page-lit: rgba(168, 143, 95, 0.10);
+  --page-sunk: rgba(0, 0, 0, 0.34);
 
-  --rule: #b09a70;
-  --rule-dark: #8a7550;
+  --rule: rgba(190, 160, 105, 0.14);
+  --rule-dark: rgba(190, 160, 105, 0.26);
 
-  --text: #2a2317;
-  --text-dim: #6a5a41;
-  --text-on-frame: #f6ecd6;
+  --text: #d6c9af;
+  --text-dim: #9a8a6e;
+  --text-faint: #6e6250;
+  --text-on-frame: #e2cfa4;
 
-  --link: #8a3d12;
-  --link-hot: #b35418;
+  /* Muted and dark on purpose: it has to stay clear of the bright yellow the
+     rarity ladder uses for RARE, or the ladder stops meaning anything. */
+  --gold: #a88f5f;
 
-  --bad-bg: #f0d4cd;
-  --bad-edge: #a8422e;
-  --bad-text: #6d2216;
-  --good-bg: #dce6cd;
-  --good-edge: #5f7d3a;
-  --good-text: #33471c;
+  --link: #c8a45e;
+  --link-hot: #e6c07a;
 
-  --ui: Verdana, "DejaVu Sans", Geneva, Tahoma, sans-serif;
-  --mono: ui-monospace, "DejaVu Sans Mono", "Courier New", monospace;
+  --bad-bg: rgba(120, 40, 28, 0.28);
+  --bad-edge: rgba(196, 85, 42, 0.55);
+  --bad-text: #eab5a0;
+  --good-bg: rgba(63, 107, 51, 0.24);
+  --good-edge: rgba(110, 160, 90, 0.50);
+  --good-text: #bcd6a8;
+
+  /* The Rarity table's own colours. COMMON carries none there and none here. */
+  --r-common: #868c94;
+  --r-uncommon: #1cb6d9;
+  --r-rare: #ffdd00;
+  --r-legendary: #aa00ff;
+  --r-legendary-glow: #660099;
+
+  --display: "Deeds Display", Georgia, serif;
+  --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
-* {
-  box-sizing: border-box;
-}
+/* One world, committed. The toggle is answered so nothing breaks, but a light
+   inversion of this would be a different site wearing the same name. */
+:root[data-theme="light"], :root[data-theme="dark"] { color-scheme: dark; }
 
-html,
-body,
-#root {
-  height: 100%;
-}
+* { box-sizing: border-box; }
 
 body {
   margin: 0;
-  background-color: var(--outside);
-  background-image:
-    linear-gradient(180deg, rgba(0, 0, 0, 0.5), transparent 200px),
-    repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.011) 0 2px, transparent 2px 5px);
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.45;
   color: var(--text);
-  font-family: var(--ui);
-  font-size: 12px;
-  line-height: 1.5;
+  background: var(--outside);
 }
+
+/* Fixed behind everything: a set, not wallpaper that scrolls with the page. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background: url("/ground.jpg") 50% 38% / cover no-repeat;
+}
+/* Vignette and a floor-to-ceiling fade, so a box lands on something dark enough
+   to read against wherever the page has been scrolled to. */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(130% 100% at 50% 24%, transparent 12%, rgba(11, 9, 6, 0.70) 74%),
+    linear-gradient(180deg, rgba(11, 9, 6, 0.62) 0%, rgba(11, 9, 6, 0.24) 26%, rgba(11, 9, 6, 0.95) 100%);
+}
+
+a { color: var(--link); text-decoration: none; }
+a:hover { color: var(--link-hot); }
+:focus-visible { outline: 2px solid var(--r-uncommon); outline-offset: 2px; }
 
 /* --------------------------------------------------------------- layout - */
 
-.masthead {
-  border-bottom: 2px solid var(--outside-dark);
-  background: linear-gradient(180deg, var(--frame-lit), var(--frame));
-  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.45);
-}
+/* The page opens on a margin of nothing, so the picture is established before
+   anything is asked of the reader. */
+.shell { padding: clamp(1.75rem, 6vw, 4rem) 0 3rem; }
 
+/* No band across the top: that strip is the one part of the page where the art
+   is worth looking at, and a solid bar spends it on links. */
+.masthead { max-width: 940px; margin: 0 auto 0.9rem; padding: 0 14px; }
 .masthead__inner {
-  max-width: 940px;
-  margin: 0 auto;
-  padding: 10px 14px;
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 14px;
+  flex-wrap: wrap;
 }
-
 .masthead__name {
   margin: 0;
-  font-size: 15px;
-  font-weight: bold;
-  letter-spacing: 0.08em;
+  font-family: var(--display);
+  font-size: clamp(1.5rem, 4.4vw, 2.2rem);
+  font-weight: 400;
+  letter-spacing: 0.04em;
   color: var(--text-on-frame);
   text-decoration: none;
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.45);
+  text-shadow: 0 3px 22px rgba(0, 0, 0, 0.95);
 }
-
 .masthead__where {
-  font-size: 11px;
-  color: #cbb68d;
+  font-size: 12px;
+  color: var(--text-dim);
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.9);
 }
 
 .layout {
@@ -109,456 +161,212 @@ body {
   gap: 14px;
   max-width: 940px;
   margin: 0 auto;
-  padding: 14px 14px 48px;
+  padding: 0 14px 48px;
   align-items: start;
 }
-
 @media (max-width: 700px) {
-  .layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
+  .layout { grid-template-columns: minmax(0, 1fr); }
 }
-
-.column > * + * {
-  margin-top: 12px;
-}
+.column > * + * { margin-top: 12px; }
 
 /* ------------------------------------------------------------------ box - */
 
 /*
- * A band of frame with a panel set into it. The title sits on the band, so the
- * frame reads as one piece rather than as a border drawn round a card.
+ * A box is weather, not a card. No outline boxing it in — a lit top edge and a
+ * body that thins downward, so the ground shows through the bottom of it and
+ * the foreground sits in the same air as the picture.
  */
 .box {
-  background: var(--frame);
-  border: 1px solid var(--frame-dark);
-  padding: 0 3px 3px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+  background: linear-gradient(
+    180deg,
+    rgba(12, 10, 7, 0.88) 0%,
+    rgba(12, 10, 7, 0.68) 55%,
+    rgba(12, 10, 7, 0.52) 100%
+  );
+  border-top: 1px solid var(--frame-dark);
+  box-shadow: 0 10px 26px -14px rgba(0, 0, 0, 0.95);
+  backdrop-filter: blur(2px);
 }
 
 .box__title {
   margin: 0;
-  padding: 5px 7px 6px;
-  font-size: 11.5px;
-  font-weight: bold;
-  letter-spacing: 0.03em;
-  color: var(--text-on-frame);
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
+  padding: 0.42rem 0.7rem;
+  font-family: var(--display);
+  font-size: 0.8rem;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--gold);
+  /* Two rules tight together: the cheapest ornament there is, and the one these
+     sites reach for most. */
+  border-bottom: 1px solid var(--frame-dark);
+  box-shadow: 0 2px 0 -1px var(--rule);
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
 }
 
-.box__body {
-  padding: 9px 10px 10px;
-  background: var(--page);
-  border: 1px solid var(--frame-dark);
-}
-
+.box__body { padding: 0.6rem 0.7rem; }
 /** Tables and lists are the panel, not something laid inside it. */
-.box__body--flush {
-  padding: 0;
-}
+.box__body--flush { padding: 0; }
 
-.box__body > p:first-child {
-  margin-top: 0;
-}
-
-.box__body > :last-child {
-  margin-bottom: 0;
-}
-
-.lede {
-  margin: 0 0 9px;
-  color: var(--text-dim);
-}
+.lede { color: var(--text-dim); margin: 0 0 0.6rem; }
 
 /* ---------------------------------------------------------------- table - */
 
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  font-variant-numeric: tabular-nums;
-}
-
+/*
+ * Ruled on all four sides of every cell. That one thing reads as an older site
+ * more than any colour choice does: a grid you read down, rather than a modern
+ * list with air in it.
+ */
+.table { border-collapse: collapse; width: 100%; font-size: 0.82rem; }
 .table th {
-  padding: 4px 8px;
   text-align: left;
-  font-size: 11px;
-  font-weight: bold;
-  color: var(--text-on-frame);
-  background: linear-gradient(180deg, var(--frame-lit), var(--frame));
-  border-bottom: 1px solid var(--frame-dark);
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
+  font-size: 0.64rem;
+  text-transform: uppercase;
+  letter-spacing: 0.10em;
+  font-weight: 700;
+  color: var(--gold);
+  padding: 0.3rem 0.55rem;
+  background: linear-gradient(180deg, rgba(168, 143, 95, 0.20), rgba(168, 143, 95, 0.09));
+  border: 1px solid var(--frame-dark);
   white-space: nowrap;
 }
-
 .table td {
-  padding: 4px 8px;
-  border-bottom: 1px solid var(--page-sunk);
+  padding: 0.24rem 0.55rem;
+  border: 1px solid rgba(190, 160, 105, 0.09);
+  vertical-align: middle;
 }
+.table tbody tr:nth-child(odd) { background: var(--page-alt); }
+.table tbody tr:hover { background: rgba(168, 143, 95, 0.14); }
 
-.table tbody tr:nth-child(odd) td {
-  background: var(--page-alt);
-}
+.table__num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.table__quiet { color: var(--text-dim); }
+.table__empty { color: var(--text-dim); text-align: center; padding: 1.1rem 0.55rem; }
 
-.table tbody tr:hover td {
-  background: var(--page-lit);
-}
-
-.table tbody tr:last-child td {
-  border-bottom: none;
-}
-
-.table__num {
-  text-align: right;
-  white-space: nowrap;
-}
-
+/*
+ * Rank wears the rarity ladder — legendary, rare, uncommon, then common for
+ * everyone below. On a page with no other saturation the top three are read
+ * before a word is.
+ */
 .table__rank {
-  width: 2.6em;
-  text-align: right;
-  color: var(--text-dim);
+  width: 2.8rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--r-common);
 }
+.table tbody tr:nth-child(1) .table__rank { color: var(--r-legendary); text-shadow: 0 0 11px var(--r-legendary-glow); }
+.table tbody tr:nth-child(2) .table__rank { color: var(--r-rare); }
+.table tbody tr:nth-child(3) .table__rank { color: var(--r-uncommon); }
 
-.table__quiet {
-  font-family: var(--mono);
-  font-size: 10.5px;
-  color: var(--text-dim);
-}
-
-.table__empty {
-  padding: 9px 10px;
-  color: var(--text-dim);
-  font-style: italic;
-}
+/*
+ * A title wears the tier its trophy count earned, so the ladder reads the same
+ * in a table cell as it does on a rank.
+ */
+.title { font-weight: 600; }
+.title--legendary { color: var(--r-legendary); }
+.title--rare { color: var(--r-rare); }
+.title--uncommon { color: var(--r-uncommon); }
+.title--common { color: var(--r-common); }
 
 /** Two-column facts. The same stripes, so a table and a fact list agree. */
-.facts {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.facts th {
-  width: 42%;
-  padding: 4px 8px;
-  text-align: left;
-  font-weight: normal;
-  color: var(--text-dim);
-  background: var(--page-alt);
-  border-bottom: 1px solid var(--page-sunk);
-}
-
-.facts td {
-  padding: 4px 8px;
-  text-align: right;
-  border-bottom: 1px solid var(--page-sunk);
-  font-variant-numeric: tabular-nums;
-}
-
+.facts { border-collapse: collapse; width: 100%; font-size: 0.83rem; }
+.facts th,
+.facts td { padding: 0.26rem 0.55rem; border-bottom: 1px dotted var(--rule); }
+.facts th { text-align: left; font-weight: 400; color: var(--text-dim); }
+.facts td { text-align: right; font-variant-numeric: tabular-nums; }
 .facts tr:last-child th,
-.facts tr:last-child td {
-  border-bottom: none;
-}
+.facts tr:last-child td { border-bottom: 0; }
 
-/* ---------------------------------------------------------------- menu - */
+/* ----------------------------------------------------------------- menu - */
 
-.menu {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.menu li + li {
-  border-top: 1px solid var(--page-sunk);
-}
-
+.menu { list-style: none; margin: 0; padding: 0; }
 .menu a {
   display: block;
-  padding: 4px 8px 4px 18px;
-  position: relative;
-  color: var(--text);
-  text-decoration: none;
+  padding: 0.3rem 0.7rem;
+  color: var(--text-dim);
+  font-size: 0.84rem;
+  /* A small pointer rather than a bullet: it is a direction, not an item. */
+  border-left: 2px solid transparent;
 }
-
-/* A small pointer rather than a bullet: it is a direction, not an item. */
-.menu a::before {
-  content: "";
-  position: absolute;
-  left: 8px;
-  top: 50%;
-  margin-top: -3px;
-  border: 3px solid transparent;
-  border-left-color: var(--frame);
-}
-
-.menu a:hover {
-  background: var(--page-lit);
-  color: var(--link);
-}
-
-.menu a:hover::before {
-  border-left-color: var(--link);
-}
-
-.menu a[aria-current="page"] {
-  background: var(--page-alt);
-  font-weight: bold;
+.menu a:hover { color: var(--text); background: rgba(168, 143, 95, 0.09); }
+.menu a[aria-current] {
+  color: var(--gold);
+  border-left-color: var(--gold);
+  background: rgba(168, 143, 95, 0.11);
 }
 
 /* ---------------------------------------------------------------- forms - */
 
-.field {
-  display: block;
-  margin-bottom: 9px;
-}
-
-.field__label {
-  display: block;
-  margin-bottom: 2px;
-  font-size: 10.5px;
-  font-weight: bold;
-  color: var(--text-dim);
-}
-
+.field { display: grid; gap: 0.25rem; margin-bottom: 0.6rem; }
+.field__label { font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; }
 .field__input {
-  width: 100%;
-  padding: 4px 6px;
-  font-family: var(--ui);
-  font-size: 12px;
+  font: inherit;
   color: var(--text);
-  background: var(--page-lit);
-  border: 1px solid var(--rule-dark);
-  border-radius: 0;
-  box-shadow: inset 1px 1px 2px rgba(58, 45, 25, 0.3);
-  outline: none;
+  background: var(--page-sunk);
+  border: 1px solid var(--frame);
+  padding: 0.35rem 0.45rem;
+  width: 100%;
 }
+.field__input:focus-visible { border-color: var(--r-uncommon); }
+.field__hint { font-size: 0.75rem; color: var(--text-faint); }
 
-.field__input:focus {
-  background: #fff;
-  border-color: var(--frame);
-  box-shadow: inset 1px 1px 2px rgba(58, 45, 25, 0.3), 0 0 0 1px rgba(93, 74, 44, 0.35);
-}
-
-.field__hint {
-  display: block;
-  margin-top: 2px;
-  font-size: 10.5px;
-  color: var(--text-dim);
-}
+.gold-field { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 
 .button {
-  display: inline-block;
-  padding: 3px 12px;
-  font-family: var(--ui);
-  font-size: 11.5px;
-  font-weight: bold;
+  font: inherit;
+  font-size: 0.85rem;
   color: var(--text-on-frame);
-  cursor: pointer;
-  background: linear-gradient(180deg, var(--frame-lit), var(--frame));
+  background: linear-gradient(180deg, rgba(168, 143, 95, 0.30), rgba(168, 143, 95, 0.14));
   border: 1px solid var(--frame-dark);
-  border-radius: 0;
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  padding: 0.35rem 0.9rem;
+  cursor: pointer;
 }
-
-.button:hover:not(:disabled) {
-  background: linear-gradient(180deg, #8c7343, var(--frame-lit));
-}
-
-.button:active:not(:disabled) {
-  box-shadow: inset 1px 1px 3px rgba(0, 0, 0, 0.45);
-}
-
-.button:disabled {
-  cursor: not-allowed;
-  opacity: 0.55;
-}
-
+.button:hover { background: linear-gradient(180deg, rgba(168, 143, 95, 0.42), rgba(168, 143, 95, 0.20)); }
+.button:disabled { opacity: 0.5; cursor: default; }
 .button--danger {
-  background: linear-gradient(180deg, #8d4234, #6d2f24);
-  border-color: #4a1d18;
+  color: #f0c4b6;
+  background: linear-gradient(180deg, rgba(150, 55, 40, 0.50), rgba(110, 40, 30, 0.35));
+  border-color: rgba(196, 85, 42, 0.50);
 }
-
-.button--danger:hover:not(:disabled) {
-  background: linear-gradient(180deg, #a34e3e, #7d3729);
-}
-
-.buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 10px;
-}
+.buttons { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
 
 /* -------------------------------------------------------------- notices - */
 
-.notice {
-  padding: 5px 8px;
-  margin-bottom: 9px;
-  border: 1px solid var(--rule-dark);
-  background: var(--page-alt);
-}
+.notice { padding: 0.45rem 0.7rem; border: 1px solid var(--frame); margin-bottom: 0.7rem; font-size: 0.85rem; }
+.notice--bad { background: var(--bad-bg); border-color: var(--bad-edge); color: var(--bad-text); }
+.notice--good { background: var(--good-bg); border-color: var(--good-edge); color: var(--good-text); }
 
-.notice--bad {
-  border-color: var(--bad-edge);
-  background: var(--bad-bg);
-  color: var(--bad-text);
-}
+/* ---------------------------------------------------------------- trade - */
 
-.notice--good {
-  border-color: var(--good-edge);
-  background: var(--good-bg);
-  color: var(--good-text);
-}
+.sides { display: grid; gap: 0.7rem; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); }
+.side { border: 1px solid var(--frame); padding: 0.6rem; background: var(--page-sunk); }
+.side__who { font-weight: 600; margin-bottom: 0.35rem; }
+.side__gold { font-variant-numeric: tabular-nums; color: var(--gold); }
+.side__state--yes { color: var(--good-text); }
+
+.wares { list-style: none; margin: 0.4rem 0 0; padding: 0; display: grid; gap: 0.25rem; }
+.ware { border: 1px solid var(--rule); padding: 0.25rem 0.45rem; font-size: 0.82rem; background: rgba(0, 0, 0, 0.25); }
+.ware--none { color: var(--text-dim); border-style: dashed; }
+.ware__id { font-family: var(--mono); color: var(--text-faint); font-size: 0.78rem; }
+.ware__fact { color: var(--text-dim); font-size: 0.78rem; }
 
 /* ----------------------------------------------------------------- misc - */
 
 .token {
-  display: block;
-  padding: 5px 7px;
   font-family: var(--mono);
-  font-size: 11.5px;
-  line-height: 1.45;
+  font-size: 0.82rem;
+  background: var(--page-sunk);
+  border: 1px solid var(--frame);
+  padding: 0.3rem 0.45rem;
   word-break: break-all;
-  color: var(--text);
-  background: var(--page-lit);
-  border: 1px solid var(--rule-dark);
-  box-shadow: inset 1px 1px 2px rgba(58, 45, 25, 0.3);
+  display: block;
 }
+.link { background: none; border: 0; padding: 0; font: inherit; color: var(--link); cursor: pointer; }
+.link:hover { color: var(--link-hot); }
+.footnote { color: var(--text-faint); font-size: 0.76rem; }
+.wait { color: var(--text-dim); font-style: italic; }
 
-.token + .field__label {
-  margin-top: 7px;
-}
-
-.link {
-  color: var(--link);
-  text-decoration: underline;
-  cursor: pointer;
-  background: none;
-  border: none;
-  padding: 0;
-  font: inherit;
-}
-
-.link:hover {
-  color: var(--link-hot);
-}
-
-.footnote {
-  margin: 9px 0 0;
-  padding-top: 7px;
-  border-top: 1px solid var(--page-sunk);
-  font-size: 11px;
-  color: var(--text-dim);
-}
-
-.wait {
-  padding: 6px 0;
-  color: var(--text-dim);
-}
-
-/* ---------------------------------------------------------------- trade - */
-
-.sides {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1px;
-  background: var(--frame-dark);
-}
-
-@media (max-width: 520px) {
-  .sides {
-    grid-template-columns: 1fr;
-  }
-}
-
-.side {
-  background: var(--page);
-  padding: 0 0 7px;
-}
-
-.side__who {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 8px;
-  margin: 0 0 4px;
-  padding: 3px 8px;
-  background: var(--page-alt);
-  border-bottom: 1px solid var(--page-sunk);
-  font-size: 10.5px;
-  font-weight: bold;
-  color: var(--text-dim);
-}
-
-.side__state--yes {
-  color: var(--good-text);
-}
-
-.side__gold {
-  margin: 5px 8px 0;
-  padding-top: 4px;
-  border-top: 1px solid var(--page-sunk);
-  font-variant-numeric: tabular-nums;
-}
-
-/*
- * A bag is a list of weapons, striped like every other list on the site so a
- * table and an offer do not look like they came from different places.
- */
-.wares {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  font-variant-numeric: tabular-nums;
-}
-
-.ware {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 3px 8px;
-  border-bottom: 1px solid var(--page-sunk);
-}
-
-.ware:nth-child(odd) {
-  background: var(--page-alt);
-}
-
-.ware:last-child {
-  border-bottom: none;
-}
-
-.ware__id {
-  font-family: var(--mono);
-  font-size: 10.5px;
-  color: var(--text-dim);
-}
-
-.ware__fact {
-  margin-left: auto;
-  font-size: 11px;
-  color: var(--text-dim);
-}
-
-.ware--none {
-  padding: 6px 8px;
-  color: var(--text-dim);
-  font-style: italic;
-}
-
-.gold-field {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  margin: 9px 0 0;
-  padding: 0 8px;
-}
-
-.gold-field .field__input {
-  width: 96px;
-}
-
-.gold-field span {
-  font-size: 10.5px;
-  font-weight: bold;
-  color: var(--text-dim);
+@media (prefers-reduced-motion: no-preference) {
+  .table tbody tr, .menu a, .button, a { transition: color 110ms ease, background 110ms ease; }
 }

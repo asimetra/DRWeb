@@ -242,3 +242,45 @@ server to prove it would be testing the other repository.
 
 GPL-3.0-or-later. See the game server's `NOTICE.md` for the redistribution
 boundary that project keeps; this one holds no game material at all.
+
+## The game's own art
+
+The site reads two files from `web/public/`, and neither is in this repository:
+
+| file | what it is |
+| --- | --- |
+| `ground.jpg` | a dungeon's loading art, desaturated and darkened |
+| `display.woff2` | the client's headline face, subset to letters |
+
+They are the game's assets rather than this project's. The server repository
+refuses to carry anything of the kind — `.swf`, its resource tree, even the
+product name — and this repository keeps the same line by ignoring the
+directory. Without them the site renders on the plain dark ground with a serif
+fallback: duller, not broken.
+
+To produce them from a client you already own, with Pillow and fonttools:
+
+```py
+from PIL import Image, ImageEnhance
+im = Image.open("<a loading screen>.jpg").convert("L")
+im = ImageEnhance.Contrast(im).enhance(1.15)
+im = ImageEnhance.Brightness(im).enhance(0.42)   # dark enough to read type on
+im.resize((1920, 1072)).save("web/public/ground.jpg", quality=74, optimize=True)
+```
+
+```py
+from fontTools.ttLib import TTFont
+from fontTools.subset import Subsetter, Options
+f = TTFont("<the client's display face>.ttf")
+s = Subsetter(options=Options()); s.populate(text=
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"); s.subset(f)
+f.flavor = "woff2"; f.save("web/public/display.woff2")
+```
+
+The face carries **letters only** — no digits, no punctuation — which is why
+the stylesheet puts it on headings and labels and never on data: a heading with
+a number in it would break mid-word into the fallback.
+
+A public deployment should satisfy itself about both licences first. The font's
+`fsType` is 0, its own "embedding unrestricted" flag, but that is a technical
+signal and not a licence.

@@ -7,3 +7,16 @@ node_modules/
 
 # Built front end.
 /public/
+
+# The game's own art and typeface, which the site reads from web/public/ and
+# which are deliberately not in this repository.
+#
+# ground.jpg is a dungeon's loading screen and display.woff2 is the client's
+# headline face: one is the game's art and the other a third-party font whose
+# licence is its own question. The server repository refuses both by a check;
+# this is the same decision, kept by hand. An operator puts them here on their
+# own machine, and a clone without them renders on the plain dark ground with a
+# serif fallback — a duller site, not a broken one.
+#
+# See README, "The game's own art".
+/web/public/

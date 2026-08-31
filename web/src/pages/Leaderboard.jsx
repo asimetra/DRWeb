@@ -47,6 +47,8 @@ export const Standings = ({ metric, limit = 20, scope = {} }) => {
         <tr>
           <th className="table__rank">#</th>
           <th>Player</th>
+          <th>Title</th>
+          <th className="table__num">Trophies</th>
           <th className="table__num">{HEADING[metric] ?? "Value"}</th>
         </tr>
       </thead>
@@ -57,6 +59,18 @@ export const Standings = ({ metric, limit = 20, scope = {} }) => {
             <td>
               {entry.name || "unnamed"}{" "}
               <span className="table__quiet">{entry.account_id}</span>
+            </td>
+            {/*
+              A title is what somebody has beaten, not where they placed: a
+              trophy is the first clear of a boss node and there are twelve of
+              them, so it wears the tier its count has earned.
+            */}
+            <td className={entry.title ? `title title--${entry.title.tier}` : "table__quiet"}>
+              {entry.title ? entry.title.name : "—"}
+            </td>
+            <td className="table__num">
+              {entry.trophies ?? 0}
+              <span className="table__quiet"> / 12</span>
             </td>
             <td className="table__num">{showValue(metric, entry.value)}</td>
           </tr>
