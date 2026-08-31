@@ -69,11 +69,18 @@ export const api = {
   newGameToken: () => call("POST", "/api/game-token"),
 
   server: () => call("GET", "/api/server"),
-  /** The signed-in player's character, for the panel in the margin. */
-  character: () => attempt("GET", "/api/me/character"),
-
-  /** Who is on and what has happened today, for the margins. */
-  status: () => attempt("GET", "/api/status"),
+  /*
+   * The margins. These went through `attempt` so that a game server that is
+   * down could not throw the page away — but `attempt` answers with the
+   * envelope, so every field a margin read came back undefined and the boxes
+   * quietly drew zeros. `/api/status` was reporting a run today and forty
+   * minutes of uptime while the panel said none and 0m.
+   *
+   * A refusal is a rejection, which is what the panels already handle: they
+   * catch it and say the server is not answering.
+   */
+  character: () => call("GET", "/api/me/character"),
+  status: () => call("GET", "/api/status"),
 
   leaderboard: (metric, scope = {}) => {
     const query = new URLSearchParams(
