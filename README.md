@@ -71,6 +71,10 @@ the default for the obvious reason.
 | `ODW_COOKIE_SECURE` | on under `NODE_ENV=production` | Refuse to send the cookie over plain HTTP |
 | `ODW_GAME_INTERNAL_URL` | `http://127.0.0.1:8081` | The game server's internal API |
 | `ODW_GAME_INTERNAL_TOKEN` | — | Must match the game server's `ODS_INTERNAL_TOKEN` |
+| `ODW_PUBLIC_URL` | `http://127.0.0.1:3000` | Where confirmation links point |
+| `ODW_VERIFICATION_TTL_MS` | 24 hours | How long a confirmation link lasts |
+| `ODW_SMTP_URL` | — | SMTP connection string; unset logs the link instead of sending |
+| `ODW_MAIL_FROM` | `no-reply@localhost` | Sender address |
 
 The three without defaults are checked at startup, so a misconfigured
 deployment fails on the command that started it rather than on somebody's first
@@ -85,12 +89,39 @@ with it — fetch a fresh one afterwards.
 | Route | Does |
 |---|---|
 | `GET /api/csrf` | A CSRF token, and the session that carries it |
-| `POST /api/register` | Creates a user and a game account, signs in, returns the client token **once** |
+| `POST /api/register` | Creates a user and mails a confirmation link. No game account yet |
+| `POST /api/verify` | Confirms the address, creates the game account, returns the client token **once** |
+| `POST /api/verify/resend` | Another link, retiring the one before it |
 | `POST /api/login` | Signs in |
 | `POST /api/logout` | Ends the session |
 | `GET /api/me` | Who you are signed in as |
 | `POST /api/game-token` | A replacement client token |
 | `DELETE /api/game-token` | Invalidates every client token for this account |
+
+## Signing up
+
+The game account is not created until the address has been proved. Minting it
+at sign-up would mean an account, a hero and a working client token for every
+address somebody cares to type, including addresses belonging to other people.
+An unconfirmed sign-up leaves one row and nothing else.
+
+```
+POST /api/register   →  user row, confirmation link mailed, no game account
+POST /api/verify     →  game account minted, linked, token returned once
+```
+
+Confirming does the four steps in this order: mint the account, link it, mark
+the user confirmed, spend the link. A failure part way through leaves a game
+account nobody holds a token for — a wasted row — and leaves the link working
+so its owner can finish. Spending the link first would invert that, and a
+hiccup on the game server would burn somebody's only way in.
+
+Until it is confirmed, an account has no game token to ask for and
+`POST /api/game-token` says so.
+
+Without `ODW_SMTP_URL` the link is written to the log rather than sent, which
+is what makes the whole flow exercisable on a laptop. Startup says so, because
+in production it means nobody but the operator can sign up.
 
 ## Tests
 

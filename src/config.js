@@ -46,6 +46,29 @@ export const loadConfig = (environment = process.env) => ({
    */
   gameInternalUrl: (environment.ODW_GAME_INTERNAL_URL ?? "http://127.0.0.1:8081").replace(/\/$/, ""),
   gameInternalToken: environment.ODW_GAME_INTERNAL_TOKEN ?? "",
+
+  /**
+   * Where this site answers from, as somebody clicking a link in their mail
+   * would reach it. It cannot be worked out from the request that asked for
+   * the mail — a `Host` header is whatever the client sent, and building a
+   * verification link out of it is how one account's link gets sent pointing
+   * at somebody else's server.
+   */
+  publicUrl: (environment.ODW_PUBLIC_URL ?? "http://127.0.0.1:3000").replace(/\/$/, ""),
+
+  /**
+   * Long enough to survive a mail sitting unread overnight, short enough that
+   * a link found in an old inbox is not still a way in.
+   */
+  verificationTtlMs: asInt(environment.ODW_VERIFICATION_TTL_MS, 24 * 60 * 60 * 1000),
+
+  /**
+   * Unset writes the link to the log instead of sending it, which is how this
+   * runs in development without a mail server. It is not a fallback anybody
+   * should reach in production, so startup says so plainly.
+   */
+  smtpUrl: environment.ODW_SMTP_URL ?? "",
+  mailFrom: environment.ODW_MAIL_FROM ?? "no-reply@localhost",
 });
 
 export const config = loadConfig();

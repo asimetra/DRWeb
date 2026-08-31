@@ -28,6 +28,13 @@ try {
   process.exit(1);
 }
 
+if (!config.smtpUrl) {
+  console.warn(
+    "mail: ODW_SMTP_URL is unset — confirmation links will be written to the log " +
+      "instead of sent. Nobody but the operator can sign up that way."
+  );
+}
+
 const app = await buildApp({ logger: true });
 await app.listen({ host: config.host, port: config.port });
 app.log.info(`storage: ${config.storage}`);

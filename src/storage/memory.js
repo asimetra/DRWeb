@@ -10,6 +10,7 @@ import { EmailTaken } from "./errors.js";
  */
 const users = new Map();
 const sessions = new Map();
+const verifications = new Map();
 let nextUserId = 1;
 
 const folded = (email) => String(email).trim().toLowerCase();
@@ -83,10 +84,41 @@ export const destroyUserSessions = async (userId) => {
   }
 };
 
+export const markVerified = async (id) => {
+  const user = users.get(Number(id));
+  if (user) user.verified_at = new Date();
+};
+
+export const createVerification = async ({ userId, tokenHash, expires }) => {
+  verifications.set(tokenHash, { userId: Number(userId), expires });
+};
+
+export const findVerification = async (tokenHash) => {
+  const row = verifications.get(tokenHash);
+  if (!row) return null;
+  if (row.expires.getTime() <= Date.now()) {
+    verifications.delete(tokenHash);
+    return null;
+  }
+  return { userId: row.userId };
+};
+
+export const consumeVerification = async (tokenHash) => {
+  verifications.delete(tokenHash);
+};
+
+/** A resend retires the earlier links, so an old mail stops working. */
+export const deleteUserVerifications = async (userId) => {
+  for (const [key, row] of verifications) {
+    if (row.userId === Number(userId)) verifications.delete(key);
+  }
+};
+
 export const ping = async () => {};
 
 export const close = async () => {
   users.clear();
   sessions.clear();
+  verifications.clear();
   nextUserId = 1;
 };

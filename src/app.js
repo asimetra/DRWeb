@@ -11,6 +11,7 @@ import fastifyStatic from "@fastify/static";
 import { config } from "./config.js";
 import * as storage from "./storage/index.js";
 import * as gameServer from "./game.js";
+import { createMailer } from "./mail.js";
 import { authRoutes } from "./routes/auth.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -60,10 +61,16 @@ const sessionStore = {
  * game account are created together or not at all — and standing up a second
  * server to prove it would be testing the other repository instead.
  */
-export const buildApp = async ({ game = gameServer, rateLimited = true, logger = false } = {}) => {
+export const buildApp = async ({
+  game = gameServer,
+  mailer = null,
+  rateLimited = true,
+  logger = false,
+} = {}) => {
   const app = Fastify({ logger, trustProxy: true });
 
   app.decorate("game", game);
+  app.decorate("mailer", mailer ?? (await createMailer()));
 
   await app.register(helmet, {
     // Set once the front end is built and its own sources are known; a policy

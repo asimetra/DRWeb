@@ -107,6 +107,35 @@ export const sweepExpiredSessions = async () => {
   return rowCount;
 };
 
+export const markVerified = async (id) => {
+  await connect().query("UPDATE web.users SET verified_at = now() WHERE id = $1", [Number(id)]);
+};
+
+export const createVerification = async ({ userId, tokenHash, expires }) => {
+  await connect().query(
+    "INSERT INTO web.email_verifications (token_hash, user_id, expires) VALUES ($1, $2, $3)",
+    [tokenHash, Number(userId), expires]
+  );
+};
+
+/** Expiry is in the query: a row that has run out must not be honoured. */
+export const findVerification = async (tokenHash) => {
+  const { rows } = await connect().query(
+    "SELECT user_id FROM web.email_verifications WHERE token_hash = $1 AND expires > now()",
+    [tokenHash]
+  );
+  return rows[0] ? { userId: rows[0].user_id } : null;
+};
+
+export const consumeVerification = async (tokenHash) => {
+  await connect().query("DELETE FROM web.email_verifications WHERE token_hash = $1", [tokenHash]);
+};
+
+/** A resend retires the earlier links, so an old mail stops working. */
+export const deleteUserVerifications = async (userId) => {
+  await connect().query("DELETE FROM web.email_verifications WHERE user_id = $1", [Number(userId)]);
+};
+
 export const ping = async () => {
   await connect().query("SELECT 1");
 };

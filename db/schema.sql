@@ -50,3 +50,25 @@ CREATE TABLE IF NOT EXISTS web.sessions (
 
 CREATE INDEX IF NOT EXISTS sessions_user ON web.sessions(user_id);
 CREATE INDEX IF NOT EXISTS sessions_expires ON web.sessions(expires);
+
+/*
+ * Outstanding "click this to prove the address is yours" links.
+ *
+ * The token is stored as a digest, not as itself. Anybody reading this table
+ * would otherwise hold a working link for every address waiting on one, and
+ * these are handed out precisely to people who have not proved anything yet.
+ * A plain SHA-256 is enough where a password would need argon2: the token is
+ * 32 random bytes, so there is no small set of likely values to work through.
+ *
+ * One row per outstanding request, deleted when it is used. A resend clears
+ * the account's earlier rows, so an old link in an old mail stops working the
+ * moment a new one is asked for.
+ */
+CREATE TABLE IF NOT EXISTS web.email_verifications (
+    token_hash TEXT        PRIMARY KEY,
+    user_id    BIGINT      NOT NULL REFERENCES web.users(id) ON DELETE CASCADE,
+    expires    TIMESTAMPTZ NOT NULL,
+    created    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS email_verifications_user ON web.email_verifications(user_id);

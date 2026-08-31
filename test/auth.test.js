@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import test, { after, beforeEach } from "node:test";
 
 process.env.ODW_STORAGE = "memory";
@@ -10,12 +11,12 @@ const { GameServerError } = await import("../src/game.js");
 const storage = await import("../src/storage/index.js");
 
 /**
- * The game server, stood in for.
+ * The two things outside this process, stood in for.
  *
- * What is being tested here is this application's half of registering — that a
- * user row and a game account are created together or not at all, and that a
- * failure on the far side leaves nothing behind. Standing up a real server to
- * prove that would be testing the other repository.
+ * What is being tested is this application's half of signing up: that an
+ * address nobody has proved gets no game account, and that a confirmed one
+ * gets exactly one. Standing up a game server and an SMTP server to show that
+ * would be testing somebody else's software.
  */
 const fakeGame = {
   registrations: [],
@@ -39,7 +40,15 @@ const fakeGame = {
   },
 };
 
-const app = await buildApp({ game: fakeGame, rateLimited: false });
+const fakeMailer = {
+  sent: [],
+  async sendVerification(email, token) {
+    fakeMailer.sent.push({ email, token });
+  },
+};
+const lastLink = () => fakeMailer.sent.at(-1);
+
+const app = await buildApp({ game: fakeGame, mailer: fakeMailer, rateLimited: false });
 await app.ready();
 
 after(async () => {
@@ -50,6 +59,7 @@ after(async () => {
 beforeEach(async () => {
   fakeGame.registrations.length = 0;
   fakeGame.failWith = null;
+  fakeMailer.sent.length = 0;
   await storage.close();
 });
 
@@ -79,7 +89,6 @@ const browser = () => {
   return {
     send,
     get: (url) => send("GET", url),
-    /** Every state-changing call carries a token, the way the front end will. */
     post: async (url, body) => send("POST", url, body, { "x-csrf-token": await csrf() }),
     delete: async (url) => send("DELETE", url, undefined, { "x-csrf-token": await csrf() }),
   };
@@ -87,71 +96,160 @@ const browser = () => {
 
 const credentials = { email: "player@example.com", password: "a-long-enough-password" };
 
-test("registering creates a user and a game account together", async () => {
-  const response = await browser().post("/api/register", { ...credentials, name: "Kahraman" });
+/** Signed up and confirmed, for the tests whose subject is what comes after. */
+const confirmed = async () => {
+  const visitor = browser();
+  await visitor.post("/api/register", credentials);
+  const done = await visitor.post("/api/verify", { token: lastLink().token });
+  return { visitor, ...done.json() };
+};
+
+test("registering creates a user and sends a link, and mints no game account", async () => {
+  const response = await browser().post("/api/register", credentials);
   assert.equal(response.statusCode, 201);
 
-  const { user, game } = response.json();
-  assert.equal(user.email, credentials.email);
-  assert.equal(user.accountId, game.accountId);
-  assert.match(game.token, /^\d+:[0-9a-f]{64}$/);
-  assert.equal(fakeGame.registrations.at(-1).name, "Kahraman");
+  const body = response.json();
+  assert.equal(body.user.email, credentials.email);
+  assert.equal(body.user.verified, false);
+  assert.equal(body.user.accountId, null);
+  assert.equal(body.verificationRequired, true);
+
+  assert.equal(lastLink().email, credentials.email);
+  assert.equal(
+    fakeGame.registrations.length,
+    0,
+    "an address nobody has proved must not get a game account"
+  );
 });
 
-test("registering signs you in", async () => {
+test("confirming creates the game account and hands over its token", async () => {
   const visitor = browser();
   await visitor.post("/api/register", credentials);
 
-  const me = await visitor.get("/api/me");
-  assert.equal(me.statusCode, 200);
-  assert.equal(me.json().user.email, credentials.email);
-});
+  const response = await visitor.post("/api/verify", { token: lastLink().token });
+  assert.equal(response.statusCode, 200);
 
-/**
- * The unique index is the only thing that can settle a race between two
- * sign-ups, which is why the user row is written before the account is minted.
- */
-test("a second sign-up with the same address is refused and mints nothing", async () => {
-  await browser().post("/api/register", credentials);
-  const again = await browser().post("/api/register", { ...credentials, password: "another-password" });
-
-  assert.equal(again.statusCode, 409);
+  const { user, game } = response.json();
+  assert.equal(user.verified, true);
+  assert.equal(user.accountId, game.accountId);
+  assert.match(game.token, /^\d+:[0-9a-f]{64}$/);
   assert.equal(fakeGame.registrations.length, 1);
 });
 
+test("an unconfirmed user cannot get a game token", async () => {
+  const visitor = browser();
+  await visitor.post("/api/register", credentials);
+
+  const refused = await visitor.post("/api/game-token");
+  assert.equal(refused.statusCode, 409);
+});
+
+test("a link that was never issued is refused", async () => {
+  await browser().post("/api/register", credentials);
+  const response = await browser().post("/api/verify", { token: "not-a-real-token" });
+  assert.equal(response.statusCode, 400);
+  assert.equal(fakeGame.registrations.length, 0);
+});
+
+test("an expired link is refused", async () => {
+  const visitor = browser();
+  await visitor.post("/api/register", credentials);
+  const user = await storage.findUserByEmail(credentials.email);
+
+  const stale = "a-token-that-has-run-out";
+  await storage.createVerification({
+    userId: user.id,
+    tokenHash: createHash("sha256").update(stale).digest("hex"),
+    expires: new Date(Date.now() - 1000),
+  });
+
+  const response = await visitor.post("/api/verify", { token: stale });
+  assert.equal(response.statusCode, 400);
+  assert.equal(fakeGame.registrations.length, 0);
+});
+
 /**
- * The other order would leave a game account nobody can reach. This one leaves
- * a user row, which can be taken back out — and is.
+ * Clicking twice is ordinary — mail clients prefetch, people double-click. The
+ * second one must not mint a second account.
  */
-test("a game server that refuses leaves no half-made user behind", async () => {
+test("a link used twice creates only one account", async () => {
+  const visitor = browser();
+  await visitor.post("/api/register", credentials);
+  const token = lastLink().token;
+
+  const first = await visitor.post("/api/verify", { token });
+  const second = await visitor.post("/api/verify", { token });
+
+  assert.equal(first.statusCode, 200);
+  assert.equal(second.statusCode, 400, "the token is spent");
+  assert.equal(fakeGame.registrations.length, 1);
+});
+
+test("asking for another link retires the one before it", async () => {
+  const visitor = browser();
+  await visitor.post("/api/register", credentials);
+  const original = lastLink().token;
+
+  await visitor.post("/api/verify/resend", { email: credentials.email });
+  const replacement = lastLink().token;
+  assert.notEqual(original, replacement);
+
+  assert.equal((await visitor.post("/api/verify", { token: original })).statusCode, 400);
+  assert.equal((await visitor.post("/api/verify", { token: replacement })).statusCode, 200);
+});
+
+/**
+ * Told apart, this would be a way to ask which addresses have signed up here.
+ */
+test("a resend for an unknown address answers the same and sends nothing", async () => {
+  const response = await browser().post("/api/verify/resend", { email: "nobody@example.com" });
+  assert.equal(response.statusCode, 200);
+  assert.equal(fakeMailer.sent.length, 0);
+});
+
+/**
+ * Spending the token first would burn somebody's only link over a hiccup on
+ * the far side. This way the cost of a failure is a row nobody holds a token
+ * for, and the link still works.
+ */
+test("a game server that refuses leaves the link usable", async () => {
+  const visitor = browser();
+  await visitor.post("/api/register", credentials);
+  const token = lastLink().token;
+
   fakeGame.failWith = new GameServerError(503, "game server unreachable");
+  assert.equal((await visitor.post("/api/verify", { token })).statusCode, 502);
 
-  const failed = await browser().post("/api/register", credentials);
-  assert.equal(failed.statusCode, 502);
-  assert.equal(await storage.findUserByEmail(credentials.email), null);
-
-  // And the address is free again, which is the whole point of rolling back.
   fakeGame.failWith = null;
-  const retried = await browser().post("/api/register", credentials);
-  assert.equal(retried.statusCode, 201);
+  const retried = await visitor.post("/api/verify", { token });
+  assert.equal(retried.statusCode, 200);
+  assert.equal(fakeGame.registrations.length, 1);
+});
+
+test("a second sign-up with the same address is refused", async () => {
+  await browser().post("/api/register", credentials);
+  const again = await browser().post("/api/register", { ...credentials, password: "another-password" });
+  assert.equal(again.statusCode, 409);
+});
+
+test("a short password is refused before anything is written", async () => {
+  const response = await browser().post("/api/register", { email: "x@example.com", password: "short" });
+  assert.equal(response.statusCode, 400);
+  assert.equal(fakeMailer.sent.length, 0);
 });
 
 test("signing in with the right password works, and the wrong one does not", async () => {
-  await browser().post("/api/register", credentials);
+  await confirmed();
 
-  const good = await browser().post("/api/login", credentials);
-  assert.equal(good.statusCode, 200);
-
-  const bad = await browser().post("/api/login", { ...credentials, password: "not-the-password" });
-  assert.equal(bad.statusCode, 401);
+  assert.equal((await browser().post("/api/login", credentials)).statusCode, 200);
+  assert.equal(
+    (await browser().post("/api/login", { ...credentials, password: "not-the-password" })).statusCode,
+    401
+  );
 });
 
-/**
- * An unknown address and a wrong password answer alike, or this becomes a way
- * to ask whether somebody has an account here.
- */
 test("an unknown address is refused in the same words as a wrong password", async () => {
-  await browser().post("/api/register", credentials);
+  await confirmed();
 
   const unknown = await browser().post("/api/login", { email: "nobody@example.com", password: "whatever-long" });
   const wrong = await browser().post("/api/login", { ...credentials, password: "wrong-but-long" });
@@ -160,49 +258,39 @@ test("an unknown address is refused in the same words as a wrong password", asyn
   assert.deepEqual(unknown.json(), wrong.json());
 });
 
-test("a short password is refused before anything is written", async () => {
-  const response = await browser().post("/api/register", { email: "x@example.com", password: "short" });
-  assert.equal(response.statusCode, 400);
-  assert.equal(fakeGame.registrations.length, 0);
+test("confirming signs you in, wherever the link was opened", async () => {
+  const { visitor } = await confirmed();
+  const me = await visitor.get("/api/me");
+
+  assert.equal(me.statusCode, 200);
+  assert.equal(me.json().user.verified, true);
 });
 
 test("signing out ends the session", async () => {
-  const visitor = browser();
-  await visitor.post("/api/register", credentials);
-  assert.equal((await visitor.get("/api/me")).statusCode, 200);
-
+  const { visitor } = await confirmed();
   await visitor.post("/api/logout");
   assert.equal((await visitor.get("/api/me")).statusCode, 401);
 });
 
 test("a state-changing call without a CSRF token is refused", async () => {
   const visitor = browser();
-  // A session exists — this is not "no cookie", it is "no token".
   await visitor.get("/api/csrf");
   const response = await visitor.send("POST", "/api/register", credentials);
 
   assert.equal(response.statusCode, 403);
-  assert.equal(fakeGame.registrations.length, 0);
+  assert.equal(fakeMailer.sent.length, 0);
 });
 
 test("asking who you are without signing in is refused", async () => {
   assert.equal((await browser().get("/api/me")).statusCode, 401);
 });
 
-test("a replacement game token needs a session", async () => {
-  assert.equal((await browser().post("/api/game-token")).statusCode, 401);
+test("a confirmed account can replace and revoke its game token", async () => {
+  const { visitor, game } = await confirmed();
 
-  const visitor = browser();
-  await visitor.post("/api/register", credentials);
   const reissued = await visitor.post("/api/game-token");
-
   assert.equal(reissued.statusCode, 200);
   assert.match(reissued.json().token, /^\d+:[0-9a-f]{64}$/);
-});
-
-test("revoking the game tokens goes through to the game server", async () => {
-  const visitor = browser();
-  const { game } = (await visitor.post("/api/register", credentials)).json();
 
   const revoked = await visitor.delete("/api/game-token");
   assert.equal(revoked.statusCode, 200);

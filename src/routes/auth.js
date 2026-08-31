@@ -1,4 +1,6 @@
+import { createHash, randomBytes } from "node:crypto";
 import * as storage from "../storage/index.js";
+import { config } from "../config.js";
 import { EmailTaken } from "../storage/errors.js";
 import { GameServerError } from "../game.js";
 import { checkPassword, hashPassword, passwordProblem } from "../passwords.js";
@@ -30,6 +32,30 @@ const emailProblem = (email) => {
   return null;
 };
 
+/**
+ * A verification token, and the digest the table holds instead of it.
+ *
+ * 32 random bytes, so guessing is not a threat model and a plain SHA-256 is
+ * the right hash — argon2 exists to slow down working through a small set of
+ * likely passwords, and there is no such set here. Hashing at all is about the
+ * table leaking: a stored token is a working link for somebody who has proved
+ * nothing yet.
+ */
+const mintVerificationToken = () => randomBytes(32).toString("base64url");
+const digestOf = (token) => createHash("sha256").update(token).digest("hex");
+
+const sendVerification = async (app, user) => {
+  // A resend retires the earlier links, so an old mail stops working.
+  await storage.deleteUserVerifications(user.id);
+  const token = mintVerificationToken();
+  await storage.createVerification({
+    userId: user.id,
+    tokenHash: digestOf(token),
+    expires: new Date(Date.now() + config.verificationTtlMs),
+  });
+  await app.mailer.sendVerification(user.email, token);
+};
+
 /** What the browser is allowed to know about the person it is signed in as. */
 const publicUser = (user) => ({
   id: user.id,
@@ -56,7 +82,9 @@ const requireAccount = async (request, reply) => {
   const stopped = await requireSession(request, reply);
   if (stopped) return stopped;
   if (!request.user.account_id) {
-    return reply.code(409).send({ error: "this user has no game account yet" });
+    return reply
+      .code(409)
+      .send({ error: "confirm your email address first — no game account exists yet" });
   }
 };
 
@@ -68,13 +96,16 @@ export const authRoutes = async (app) => {
   app.get("/api/csrf", async (request, reply) => ({ csrfToken: reply.generateCsrf() }));
 
   /**
-   * Registering, in an order chosen so that neither half can be orphaned.
+   * Registering, which now creates a user and nothing else.
    *
-   * The user row goes in first, because the unique index on the address is the
-   * only thing that can settle a race between two sign-ups and it can only
-   * settle it by being written to. Only then is the game account minted. If
-   * that fails the row is taken back out, which is recoverable; the other
-   * order would leave a game account nobody can reach, which is not.
+   * The game account waits until the address has been proved. Minting it here
+   * would mean an account, a hero and a working token for every address
+   * somebody cares to type, including addresses belonging to other people.
+   * Nothing exists to be cleaned up if the mail is never opened.
+   *
+   * The user row still goes in first and on its own, because the unique index
+   * on the address is the only thing that can settle a race between two
+   * sign-ups and it can only settle it by being written to.
    */
   app.post(
     "/api/register",
@@ -83,12 +114,9 @@ export const authRoutes = async (app) => {
       config: { rateLimit: { max: 5, timeWindow: "10 minutes" } },
     },
     async (request, reply) => {
-      const { email, password, name } = request.body ?? {};
+      const { email, password } = request.body ?? {};
       const problem = emailProblem(email) ?? passwordProblem(password);
       if (problem) return reply.code(400).send({ error: problem });
-      if (name !== undefined && (typeof name !== "string" || !name.trim())) {
-        return reply.code(400).send({ error: "name must be a non-empty string when given" });
-      }
 
       let user;
       try {
@@ -103,30 +131,105 @@ export const authRoutes = async (app) => {
         throw failure;
       }
 
+      await sendVerification(app, user);
+      request.session.userId = user.id;
+
+      request.log.info(`registered ${user.email}, awaiting confirmation`);
+      return reply.code(201).send({ user: publicUser(user), verificationRequired: true });
+    }
+  );
+
+  /**
+   * Proving the address, which is also when the game account is made.
+   *
+   * The order is: mint, link, mark, spend the token. A failure part way
+   * through leaves a game account nobody holds a token for, which costs a row
+   * and nothing else, and leaves the link still working so its owner can
+   * finish. Spending the token first would do the opposite — a game server
+   * hiccup would burn somebody's only link.
+   */
+  app.post(
+    "/api/verify",
+    {
+      onRequest: app.csrfProtection,
+      config: { rateLimit: { max: 20, timeWindow: "10 minutes" } },
+    },
+    async (request, reply) => {
+      const { token } = request.body ?? {};
+      if (typeof token !== "string" || !token) {
+        return reply.code(400).send({ error: "a verification token is required" });
+      }
+
+      const hash = digestOf(token);
+      const found = await storage.findVerification(hash);
+      if (!found) {
+        return reply.code(400).send({ error: "that link is not valid, or has expired" });
+      }
+
+      const user = await storage.findUserById(found.userId);
+      if (!user) {
+        await storage.consumeVerification(hash);
+        return reply.code(400).send({ error: "that link is not valid, or has expired" });
+      }
+
+      // Already done, and the link clicked twice. Not an error worth showing.
+      if (user.account_id) {
+        await storage.consumeVerification(hash);
+        return { user: publicUser(user), game: null };
+      }
+
       let account;
       try {
-        account = await app.game.registerAccount({ name: name?.trim() });
+        account = await app.game.registerAccount({ name: request.body?.name?.trim() });
       } catch (failure) {
-        await storage.deleteUser(user.id);
         if (failure instanceof GameServerError) {
-          request.log.error(`register: game server refused: ${failure.message}`);
+          request.log.error(`verify: game server refused: ${failure.message}`);
           return reply.code(502).send({ error: "the game server could not create an account" });
         }
         throw failure;
       }
 
       await storage.linkAccount(user.id, account.accountId);
+      await storage.markVerified(user.id);
+      await storage.consumeVerification(hash);
+
+      // Confirming is proof enough to be signed in; the link may well have
+      // been opened somewhere the sign-up session never reached.
+      await request.session.regenerate();
       request.session.userId = user.id;
 
-      request.log.info(`registered ${user.email} as game account ${account.accountId}`);
-      return reply.code(201).send({
-        user: { ...publicUser(user), accountId: account.accountId },
+      request.log.info(`confirmed ${user.email} as game account ${account.accountId}`);
+      return {
+        user: { ...publicUser(user), accountId: account.accountId, verified: true },
         /**
          * Returned once, here, because this is the moment the player has to
          * copy it into their client. Every later look costs a fresh one.
          */
         game: { accountId: account.accountId, token: account.token, expires: account.expires },
-      });
+      };
+    }
+  );
+
+  /**
+   * Another link, for a mail that never arrived.
+   *
+   * Answers the same either way. Told apart, this would be a way to ask which
+   * addresses have signed up here — which is exactly what the single answer on
+   * the sign-in route below exists to prevent.
+   */
+  app.post(
+    "/api/verify/resend",
+    {
+      onRequest: app.csrfProtection,
+      config: { rateLimit: { max: 3, timeWindow: "10 minutes" } },
+    },
+    async (request) => {
+      const { email } = request.body ?? {};
+      if (typeof email === "string" && !emailProblem(email)) {
+        const user = await storage.findUserByEmail(email);
+        if (user && !user.account_id) await sendVerification(app, user);
+      }
+      return { ok: true };
     }
   );
 
