@@ -33,7 +33,11 @@ const SHOWN = [
 const Hero = ({ hero }) => (
   <div className="hero">
     <div className="hero__head">
-      <Portrait hero={hero} mine={hero.active} />
+      {/* Not the `--me` plate. That one means "this is you, among other
+          people"; here every hero is the same person's and the distinction
+          being drawn is which is being played — which the line beside it
+          already says, and a bigger plate on one card only breaks the row. */}
+      <Portrait hero={hero} />
       <span>
         <span className="hero__name">
           {hero.name}
