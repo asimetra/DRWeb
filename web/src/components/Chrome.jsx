@@ -522,14 +522,13 @@ export const Page = ({ where, children }) => {
       </div>
 
       {/*
-        Where the art and the face came from. They are the game's own, served by
-        the game server at /content/… and never bundled into this repository —
-        which is a thing worth saying on the page rather than only in a comment.
+        The one line here that is a fact about the game rather than about this
+        site: a rarity's colour is the Rarity table's own value, which is data
+        the server reads. What art the site ships with is its operator's choice
+        and not something a footer can speak for.
       */}
       <footer className="site-foot">
-        Rarity words in the market keep the game's own colours. Background art,
-        headline face and portraits are the game's own, served at{" "}
-        <code>/content/…</code>.
+        Rarity colours are the game's own, read from its Rarity table.
       </footer>
     </>
   );

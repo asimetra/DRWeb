@@ -8,20 +8,23 @@ node_modules/
 # Built front end.
 /public/
 
-# The picture and the typeface the site reads from web/public/, deliberately in
-# no repository.
+# The picture and the typeface the site reads from web/public/.
 #
-# What they are is the operator's business and this file makes no claim about
-# it — which is the point. A repository that names an origin it cannot verify
-# has written down a guess, and a wrong guess about provenance is worse than
-# none. Whatever is put here, it is put by the person running the site and it
-# stays on their machine.
+# Ignored because this checkout does not know where they came from, not because
+# the site keeps assets out on principle — it does not. An asset whose origin is
+# known belongs in the repository like any other source, which is why the
+# heroes directory below is an exception rather than a hole in a rule.
 #
-# A clone without them renders on the plain dark ground with a serif fallback —
-# a duller site, not a broken one.
+# A clone without these two renders on the plain dark ground with a serif
+# fallback: a duller site, not a broken one.
+#
+# The contents rather than the directory: git does not descend into an ignored
+# directory, so `/web/public/` followed by an exception silently ignores the
+# exception too. Checked, not assumed.
 #
 # See README, "The picture and the face".
-/web/public/
+/web/public/*
+!/web/public/heroes/
 
 # Editor and agent scratch: local paths, not the application.
 .claude/

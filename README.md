@@ -262,29 +262,29 @@ server to prove it would be testing the other repository.
 
 ## License
 
-GPL-3.0-or-later. See the game server's `NOTICE.md` for the redistribution
-boundary that project keeps; this one holds no game material at all.
+GPL-3.0-or-later, for the code. The game server keeps a redistribution boundary
+and documents it in its own `NOTICE.md`; that boundary is that project's, and
+this repository does not claim to keep one of its own. What ships with the site
+is whatever its operator decides ships with it.
 
 ## The picture and the face
 
-The site reads two files from `web/public/`, and neither is in this repository:
+The site reads two files from `web/public/`:
 
 | file | what it is |
 | --- | --- |
 | `ground.jpg` | a picture to sit behind the page, darkened until type reads on it |
 | `display.woff2` | a display face for headings, subset to the letters used |
 
-**This project makes no claim about where either comes from.** They are supplied
-by whoever runs the site, they stay on that machine, and choosing them — and
-being right about their licence — is that person's decision. A repository that
-names an origin it has not verified has written down a guess, and a wrong guess
-about provenance helps nobody.
+They are not in git, and that is a practical decision rather than a principled
+one: this checkout does not know where they came from, so it is the operator who
+supplies them and the operator who answers for their licence. Anything of the
+right shape works — a dark, low-contrast picture and a letters-only display face
+— and there are freely licensed ones that do both well. Without them the site
+renders on the plain dark ground with a serif fallback: duller, not broken.
 
-What this repository does hold is the shape of them: a dark, low-contrast image
-and a letters-only display face. Any picture and any face fitting that
-description will do, and there are freely licensed ones that do it well. Without
-them the site renders on the plain dark ground with a serif fallback — duller,
-not broken.
+Assets whose origin *is* known can live in the repository like any other source.
+`web/public/heroes/` is tracked for exactly that.
 
 If you are darkening a picture of your own, or subsetting a face you have the
 right to use, this is the shape of it:

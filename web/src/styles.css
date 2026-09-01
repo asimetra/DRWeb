@@ -14,14 +14,15 @@
  * item's own data; everywhere else it is decoration, and decoration wears the
  * muted medal tones a scoreboard has always worn.
  *
- * Two files are read from web/public/ and are in no repository. What they are
- * is the operator's to know, and this file does not claim otherwise:
+ * Two files are read from web/public/ and are not in git, because this checkout
+ * does not know where they came from — the operator supplies them and answers
+ * for them:
  *
  *   ground.jpg     whatever picture the operator puts there, darkened
  *   display.woff2  a display face the operator supplies
  *
- * Only the third thing here comes from the game: the ladder's colours are the
- * Rarity table's own TextColor, which is data this server already reads.
+ * The one thing here that is the game's is the ladder's colours, which are the
+ * Rarity table's own TextColor.
  */
 
 /*
