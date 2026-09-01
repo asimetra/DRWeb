@@ -20,6 +20,7 @@ const storage = await import("../src/storage/index.js");
  */
 const fakeGame = {
   registrations: [],
+  registrationDelayMs: 0,
   failWith: null,
   /*
    * Names are the game server's to rule on — shape and uniqueness both — so the
@@ -34,6 +35,9 @@ const fakeGame = {
   },
   async registerAccount({ name } = {}) {
     if (fakeGame.failWith) throw fakeGame.failWith;
+    if (fakeGame.registrationDelayMs) {
+      await new Promise((resolve) => setTimeout(resolve, fakeGame.registrationDelayMs));
+    }
     /* The real server refuses a taken name with a 409 carrying a reason, and
        this test file turns on that refusal — so the double has to make it. */
     if (name && fakeGame.registrations.some((one) => one.name?.toLowerCase() === name.toLowerCase())) {
@@ -80,6 +84,7 @@ after(async () => {
 
 beforeEach(async () => {
   fakeGame.registrations.length = 0;
+  fakeGame.registrationDelayMs = 0;
   fakeGame.revocations.length = 0;
   fakeGame.failWith = null;
   fakeMailer.sent.length = 0;
@@ -209,6 +214,26 @@ test("a link used twice creates only one account", async () => {
   assert.equal(fakeGame.registrations.length, 1);
 });
 
+test("two concurrent clicks cannot redeem one confirmation link twice", async () => {
+  const signup = browser();
+  await signup.post("/api/register", credentials);
+  const token = lastLink().token;
+  fakeGame.registrationDelayMs = 20;
+
+  const first = browser();
+  const second = browser();
+  const responses = await Promise.all([
+    first.post("/api/verify", { token }),
+    second.post("/api/verify", { token }),
+  ]);
+
+  assert.deepEqual(
+    responses.map((response) => response.statusCode).sort(),
+    [200, 400]
+  );
+  assert.equal(fakeGame.registrations.length, 1);
+});
+
 test("asking for another link retires the one before it", async () => {
   const visitor = browser();
   await visitor.post("/api/register", credentials);
@@ -220,6 +245,28 @@ test("asking for another link retires the one before it", async () => {
 
   assert.equal((await visitor.post("/api/verify", { token: original })).statusCode, 400);
   assert.equal((await visitor.post("/api/verify", { token: replacement })).statusCode, 200);
+});
+
+test("concurrent resend requests leave exactly one verification link usable", async () => {
+  const visitor = browser();
+  await visitor.post("/api/register", credentials);
+  fakeMailer.sent.length = 0;
+
+  await Promise.all([
+    browser().post("/api/verify/resend", { email: credentials.email }),
+    browser().post("/api/verify/resend", { email: credentials.email }),
+  ]);
+  assert.equal(fakeMailer.sent.length, 2, "both requests keep their non-enumerating response");
+
+  const responses = [];
+  for (const link of fakeMailer.sent) {
+    responses.push(await visitor.post("/api/verify", { token: link.token }));
+  }
+  assert.deepEqual(
+    responses.map((response) => response.statusCode).sort(),
+    [200, 400]
+  );
+  assert.equal(fakeGame.registrations.length, 1);
 });
 
 /**

@@ -13,8 +13,8 @@ import { config } from "./config.js";
  */
 
 export class GameServerError extends Error {
-  constructor(status, message) {
-    super(message);
+  constructor(status, message, options) {
+    super(message, options);
     this.name = "GameServerError";
     this.status = status;
   }
@@ -30,12 +30,18 @@ const call = async (method, path, body) => {
         ...(body ? { "Content-Type": "application/json" } : {}),
       },
       body: body ? JSON.stringify(body) : undefined,
+      signal: AbortSignal.timeout(config.gameRequestTimeoutMs),
     });
   } catch (problem) {
     // Unreachable is its own answer: the game server being down is not the
     // caller's mistake, and telling them it was would send them to reset a
     // password that is fine.
-    throw new GameServerError(503, `game server unreachable: ${problem.message}`);
+    const timedOut = problem?.name === "TimeoutError" || problem?.name === "AbortError";
+    throw new GameServerError(
+      timedOut ? 504 : 503,
+      timedOut ? "game server timed out" : "game server unavailable",
+      { cause: problem }
+    );
   }
 
   const text = await response.text();

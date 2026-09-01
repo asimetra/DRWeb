@@ -156,6 +156,7 @@ const browser = () => {
   return {
     get: (url) => send("GET", url),
     post: async (url, body) => send("POST", url, body, { "x-csrf-token": await csrf() }),
+    postWithoutCsrf: (url, body) => send("POST", url, body),
   };
 };
 
@@ -233,6 +234,22 @@ test("anybody may look, only a player may take part", async () => {
     assert.equal(refused.statusCode, 401, `${url} is not open`);
   }
   assert.deepEqual(fakeGame.calls.filter(([name]) => name !== "readMarket"), []);
+});
+
+test("a signed-in browser cannot mutate the market without its CSRF token", async () => {
+  const me = await player("csrf@example.com", [weapon(501)]);
+  const before = [...fakeGame.calls];
+
+  for (const [url, body] of [
+    ["/api/market", { itemId: 501, price: 100 }],
+    ["/api/market/501/buy", {}],
+    ["/api/market/501/cancel", {}],
+    ["/api/market/claim", {}],
+  ]) {
+    const response = await me.visitor.postWithoutCsrf(url, body);
+    assert.equal(response.statusCode, 403, url);
+  }
+  assert.deepEqual(fakeGame.calls, before, "no rejected request reaches the privileged game API");
 });
 
 /** Signed up but not confirmed: there is no account to sell out of yet. */

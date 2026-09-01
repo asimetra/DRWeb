@@ -27,6 +27,9 @@ test("the address a player needs is readable without an account", async () => {
 
   assert.equal(response.statusCode, 200);
   assert.equal(response.json().gameAddress, "http://dungeon.example:8080");
+  assert.equal(response.headers["cache-control"], "no-store");
+  assert.match(response.headers["content-security-policy"], /default-src 'self'/);
+  assert.equal(response.headers["referrer-policy"], "no-referrer");
 });
 
 test("reading it starts no session", async () => {

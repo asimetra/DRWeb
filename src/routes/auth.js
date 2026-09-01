@@ -22,6 +22,7 @@ import { checkPassword, hashPassword, passwordProblem } from "../passwords.js";
  */
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_EMAIL_LENGTH = 254;
+const DUMMY_PASSWORD_HASH = hashPassword("not-a-real-account-password");
 
 const emailProblem = (email) => {
   if (typeof email !== "string") return "email must be a string";
@@ -40,9 +41,8 @@ const emailProblem = (email) => {
  * password reset is only as strong as the oldest mail in the inbox.
  */
 const sendLink = async (app, user, purpose) => {
-  await storage.deleteUserTokens(user.id, purpose);
   const token = mintToken();
-  await storage.createToken({
+  await storage.replaceUserToken({
     userId: user.id,
     tokenHash: digestOf(token),
     purpose,
@@ -67,6 +67,9 @@ const redeem = async (token, purpose) => {
   }
   return { user, hash };
 };
+
+const withTokenLock = (token, work) =>
+  storage.withTokenLock(digestOf(typeof token === "string" ? token : ""), work);
 
 const BAD_LINK = "that link is not valid, or has expired";
 
@@ -217,61 +220,64 @@ export const authRoutes = async (app) => {
       config: { rateLimit: { max: 20, timeWindow: "10 minutes" } },
     },
     async (request, reply) => {
-      const redeemed = await redeem(request.body?.token, PURPOSE.VERIFY);
-      if (!redeemed) return reply.code(400).send({ error: BAD_LINK });
-      const { user, hash } = redeemed;
+      const offered = request.body?.token;
+      return withTokenLock(offered, async () => {
+        const redeemed = await redeem(offered, PURPOSE.VERIFY);
+        if (!redeemed) return reply.code(400).send({ error: BAD_LINK });
+        const { user, hash } = redeemed;
 
-      // Already done, and the link clicked twice. Not an error worth showing.
-      if (user.account_id) {
-        await storage.consumeToken(hash);
-        return { user: publicUser(user), game: null };
-      }
-
-      /*
-       * The name chosen at sign-up, unless this request carries a replacement.
-       *
-       * A replacement is how the collision below is recovered from: the name
-       * was free when it was asked for and somebody took it in the meantime, so
-       * the confirmation page asks for another and posts the same link again.
-       */
-      let account;
-      try {
-        account = await app.game.registerAccount({
-          name: request.body?.name?.trim() || user.wanted_name || undefined,
-        });
-      } catch (failure) {
-        if (!(failure instanceof GameServerError)) throw failure;
-        /*
-         * A refused name is the one failure here the player can do something
-         * about, so it is not flattened into "the game server could not". The
-         * link is deliberately left unspent — they need it to try again.
-         */
-        if (failure.status === 409) {
-          request.log.info(`verify: name refused — ${failure.message}`);
-          return reply.code(409).send({ error: failure.message, reason: "name" });
+        // Already done, and the link clicked twice. Not an error worth showing.
+        if (user.account_id) {
+          await storage.consumeToken(hash);
+          return { user: publicUser(user), game: null };
         }
-        request.log.error(`verify: game server refused: ${failure.message}`);
-        return reply.code(502).send({ error: "the game server could not create an account" });
-      }
 
-      await storage.linkAccount(user.id, account.accountId);
-      await storage.markVerified(user.id);
-      await storage.consumeToken(hash);
-
-      // Confirming is proof enough to be signed in; the link may well have
-      // been opened somewhere the sign-up session never reached.
-      await request.session.regenerate();
-      request.session.userId = user.id;
-
-      request.log.info(`confirmed ${user.email} as game account ${account.accountId}`);
-      return {
-        user: { ...publicUser(user), accountId: account.accountId, verified: true },
-        /**
-         * Returned once, here, because this is the moment the player has to
-         * copy it into their client. Every later look costs a fresh one.
+        /*
+         * The name chosen at sign-up, unless this request carries a replacement.
+         *
+         * A replacement is how the collision below is recovered from: the name
+         * was free when it was asked for and somebody took it in the meantime, so
+         * the confirmation page asks for another and posts the same link again.
          */
-        game: { accountId: account.accountId, token: account.token, expires: account.expires },
-      };
+        let account;
+        try {
+          account = await app.game.registerAccount({
+            name: request.body?.name?.trim() || user.wanted_name || undefined,
+          });
+        } catch (failure) {
+          if (!(failure instanceof GameServerError)) throw failure;
+          /*
+           * A refused name is the one failure here the player can do something
+           * about, so it is not flattened into "the game server could not". The
+           * link is deliberately left unspent — they need it to try again.
+           */
+          if (failure.status === 409) {
+            request.log.info(`verify: name refused — ${failure.message}`);
+            return reply.code(409).send({ error: failure.message, reason: "name" });
+          }
+          request.log.error(`verify: game server refused: ${failure.message}`);
+          return reply.code(502).send({ error: "the game server could not create an account" });
+        }
+
+        await storage.linkAccount(user.id, account.accountId);
+        await storage.markVerified(user.id);
+        await storage.consumeToken(hash);
+
+        // Confirming is proof enough to be signed in; the link may well have
+        // been opened somewhere the sign-up session never reached.
+        await request.session.regenerate();
+        request.session.userId = user.id;
+
+        request.log.info(`confirmed ${user.email} as game account ${account.accountId}`);
+        return {
+          user: { ...publicUser(user), accountId: account.accountId, verified: true },
+          /**
+           * Returned once, here, because this is the moment the player has to
+           * copy it into their client. Every later look costs a fresh one.
+           */
+          game: { accountId: account.accountId, token: account.token, expires: account.expires },
+        };
+      });
     }
   );
 
@@ -315,9 +321,10 @@ export const authRoutes = async (app) => {
       }
 
       const user = await storage.findUserByEmail(email);
-      const good = user && (await checkPassword(password, user.password_hash));
-      if (!good) {
-        request.log.warn(`login refused for ${String(email).slice(0, 64)}`);
+      const good = await checkPassword(password, user?.password_hash ?? await DUMMY_PASSWORD_HASH);
+      if (!user || !good) {
+        const shown = String(email).replace(/[\u0000-\u001f\u007f-\u009f]/g, "?").slice(0, 64);
+        request.log.warn(`login refused for ${shown}`);
         return reply.code(401).send({ error: "wrong email or password" });
       }
 
@@ -383,50 +390,53 @@ export const authRoutes = async (app) => {
       const problem = passwordProblem(request.body?.password);
       if (problem) return reply.code(400).send({ error: problem });
 
-      const redeemed = await redeem(request.body?.token, PURPOSE.RESET);
-      if (!redeemed) return reply.code(400).send({ error: BAD_LINK });
-      const { user, hash } = redeemed;
+      const offered = request.body?.token;
+      return withTokenLock(offered, async () => {
+        const redeemed = await redeem(offered, PURPOSE.RESET);
+        if (!redeemed) return reply.code(400).send({ error: BAD_LINK });
+        const { user, hash } = redeemed;
 
-      if (user.account_id) {
-        try {
-          await app.game.revokeTokens(user.account_id);
-        } catch (failure) {
-          if (failure instanceof GameServerError) {
-            request.log.error(`reset: could not revoke game tokens: ${failure.message}`);
-            return reply
-              .code(502)
-              .send({ error: "the game server could not be reached — nothing was changed" });
+        if (user.account_id) {
+          try {
+            await app.game.revokeTokens(user.account_id);
+          } catch (failure) {
+            if (failure instanceof GameServerError) {
+              request.log.error(`reset: could not revoke game tokens: ${failure.message}`);
+              return reply
+                .code(502)
+                .send({ error: "the game server could not be reached — nothing was changed" });
+            }
+            throw failure;
           }
-          throw failure;
         }
-      }
 
-      await storage.setPassword(user.id, await hashPassword(request.body.password));
-      await storage.destroyUserSessions(user.id);
-      await storage.consumeToken(hash);
+        await storage.setPassword(user.id, await hashPassword(request.body.password));
+        await storage.destroyUserSessions(user.id);
+        await storage.consumeToken(hash);
 
-      /**
-       * A replacement client token, because the one in their configuration
-       * file has just stopped working and this is where they are standing. A
-       * failure here is not worth undoing the reset over — `/api/game-token`
-       * offers the same thing.
-       */
-      let game = null;
-      if (user.account_id) {
-        try {
-          const issued = await app.game.reissueToken(user.account_id);
-          game = { accountId: issued.accountId, token: issued.token, expires: issued.expires };
-        } catch (failure) {
-          if (!(failure instanceof GameServerError)) throw failure;
-          request.log.error(`reset: could not issue a replacement token: ${failure.message}`);
+        /**
+         * A replacement client token, because the one in their configuration
+         * file has just stopped working and this is where they are standing. A
+         * failure here is not worth undoing the reset over — `/api/game-token`
+         * offers the same thing.
+         */
+        let game = null;
+        if (user.account_id) {
+          try {
+            const issued = await app.game.reissueToken(user.account_id);
+            game = { accountId: issued.accountId, token: issued.token, expires: issued.expires };
+          } catch (failure) {
+            if (!(failure instanceof GameServerError)) throw failure;
+            request.log.error(`reset: could not issue a replacement token: ${failure.message}`);
+          }
         }
-      }
 
-      await request.session.regenerate();
-      request.session.userId = user.id;
+        await request.session.regenerate();
+        request.session.userId = user.id;
 
-      request.log.info(`reset the password for user ${user.id}`);
-      return { user: publicUser(user), game };
+        request.log.info(`reset the password for user ${user.id}`);
+        return { user: publicUser(user), game };
+      });
     }
   );
 

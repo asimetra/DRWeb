@@ -110,35 +110,18 @@ const Detail = ({ listing }) => {
 };
 
 /**
- * The row, and the whole item behind it.
- *
- * A market is fifty rows and an item is a dozen lines, so the table cannot
- * hold both: the row carries what a list is scanned by — the name, its rarity,
- * and the two numbers that rule a weapon in or out — and the rest waits until
- * somebody stops on it.
+ * The same weapon on one line, for the lists that are an aside rather than the
+ * page: your own stall, and what has sold. The full card is for choosing
+ * between things; here you already know which one it is.
  */
-const Weapon = ({ listing }) => {
-  const modifiers = (listing.modifiers ?? []).length + (listing.legendary ? 1 : 0);
-  return (
-    <span className="weapon">
-      <span className={`title title--${tierOf(listing.rarity)}`}>
-        {listing.name ?? `item ${listing.item_id}`}
-      </span>
-      {listing.power ? <span className="table__quiet"> · power {listing.power}</span> : null}
-      {listing.requiredlevel ? (
-        <span className="table__quiet"> · level {listing.requiredlevel}</span>
-      ) : null}
-      {modifiers ? (
-        <span className="weapon__count">
-          {modifiers === 1 ? "1 modifier" : `${modifiers} modifiers`}
-        </span>
-      ) : null}
-      <span className="weapon__card" role="tooltip">
-        <Detail listing={listing} />
-      </span>
+const Line = ({ listing }) => (
+  <>
+    <span className={`title title--${tierOf(listing.rarity)}`}>
+      {listing.name ?? `item ${listing.item_id}`}
     </span>
-  );
-};
+    {listing.power ? <span className="table__quiet"> · power {listing.power}</span> : null}
+  </>
+);
 
 const Gold = ({ children }) => (
   <span className="gold">{whole.format(Number(children ?? 0))}</span>
@@ -241,50 +224,30 @@ export const Market = () => {
         ) : !listings.length ? (
           <p className="table__empty">Nobody has anything up for sale.</p>
         ) : (
-          <div className="table-wrap">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th scope="col">Weapon</th>
-                  <th scope="col">Seller</th>
-                  <th className="table__num" scope="col">
-                    Price
-                  </th>
-                  <th scope="col" />
-                </tr>
-              </thead>
-              <tbody>
-                {listings.map((listing) => {
-                  const mine = listing.seller_id === viewer?.accountId;
-                  return (
-                    <tr key={listing.id}>
-                      <td>
-                        <Weapon listing={listing} />
-                      </td>
-                      <td>{mine ? <em>you</em> : listing.seller_name}</td>
-                      <td className="table__num">
-                        <Gold>{listing.price}</Gold>
-                      </td>
-                      <td className="table__num">
-                        {mine ? (
-                          <span className="table__quiet">yours</span>
-                        ) : (
-                          <Button
-                            disabled={!playing || busy > 0}
-                            onClick={() =>
-                              doing(() => api.buyListing(listing.id), "Bought.")
-                            }
-                          >
-                            Buy
-                          </Button>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <ul className="stock">
+            {listings.map((listing) => {
+              const mine = listing.seller_id === viewer?.accountId;
+              return (
+                <li className="stock__row" key={listing.id}>
+                  <Detail listing={listing} />
+                  <div className="stock__deal">
+                    <Gold>{listing.price}</Gold>
+                    <span className="stock__seller">
+                      {mine ? <em>you</em> : listing.seller_name}
+                    </span>
+                    {mine ? null : (
+                      <Button
+                        disabled={!playing || busy > 0}
+                        onClick={() => doing(() => api.buyListing(listing.id), "Bought.")}
+                      >
+                        Buy
+                      </Button>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
         )}
       </Box>
 
@@ -337,7 +300,7 @@ const Stall = ({ stall, bag, busy, onList, onCancel, onClaim }) => {
             {stall.listed.map((listing) => (
               <li key={listing.id}>
                 <span className="mini__nm">
-                  <Weapon listing={listing} />
+                  <Line listing={listing} />
                 </span>
                 <span className="mini__vl">
                   <Gold>{listing.price}</Gold>

@@ -446,39 +446,42 @@ a:hover { color: var(--link-hot); }
  * scans a market for; the modifiers are what they stop on. Colouring both
  * would leave the table with nothing to rest on.
  */
-.weapon { position: relative; display: inline-block; }
-.weapon__count {
-  display: block;
-  font-size: 0.72rem;
-  color: var(--text-faint);
-  margin-top: 0.1rem;
-}
-
 /*
- * The whole item, kept out of the row until somebody stops on it.
+ * A listing is a panel, not a row with a card hiding behind it.
  *
- * Fifty listings and a dozen lines each will not share a table, so the row
- * carries what a market is scanned by and this carries what it is decided by.
- * Shown on hover and on keyboard focus both: a card only a mouse can open is
- * a card half the people reading cannot.
+ * The card was clipped: it hung out of `.table-wrap`, which scrolls sideways
+ * and therefore cuts anything reaching past its edge. The deeper problem was
+ * that the market — the thing the page is for — had been given the least room
+ * on it. So the item is laid out in the open and the table is gone.
  */
-.weapon__card {
-  position: absolute;
-  z-index: 20;
-  top: 100%;
-  left: 0;
-  width: 19rem;
-  padding: 0.7rem 0.85rem;
-  background: #0d0b08;
-  border: 1px solid var(--frame-dark);
-  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.6);
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity 90ms ease-out;
-  pointer-events: none;
+.stock { list-style: none; margin: 0; padding: 0; }
+.stock__row {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 0.85rem 0.9rem;
+  border-bottom: 1px solid var(--rule);
 }
-.weapon:hover .weapon__card,
-.weapon:focus-within .weapon__card { opacity: 1; visibility: visible; }
+.stock__row:last-child { border-bottom: 0; }
+.stock__row:nth-child(odd) { background: var(--page-alt); }
+
+/* Price, seller and the button, kept together at the end of the row so the
+   eye finds every one of them in the same place down the list. */
+.stock__deal {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.35rem;
+  flex: 0 0 auto;
+  text-align: right;
+}
+.stock__seller { font-size: 0.74rem; color: var(--text-faint); }
+
+@media (max-width: 34rem) {
+  .stock__row { flex-direction: column; }
+  .stock__deal { flex-direction: row; align-items: center; align-self: stretch; justify-content: space-between; }
+}
 
 .item__name { font-weight: 600; font-size: 0.95rem; }
 .item__type {

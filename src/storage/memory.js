@@ -12,6 +12,7 @@ const users = new Map();
 const sessions = new Map();
 const tokens = new Map();
 let nextUserId = 1;
+const tokenLocks = new Map();
 
 const folded = (email) => String(email).trim().toLowerCase();
 const copy = (user) => (user ? { ...user } : null);
@@ -101,6 +102,13 @@ export const createToken = async ({ userId, tokenHash, purpose, expires }) => {
   tokens.set(tokenHash, { userId: Number(userId), purpose, expires });
 };
 
+export const replaceUserToken = async ({ userId, tokenHash, purpose, expires }) => {
+  for (const [key, row] of tokens) {
+    if (row.userId === Number(userId) && row.purpose === purpose) tokens.delete(key);
+  }
+  tokens.set(tokenHash, { userId: Number(userId), purpose, expires });
+};
+
 export const findToken = async (tokenHash, purpose) => {
   const row = tokens.get(tokenHash);
   if (!row || row.purpose !== purpose) return null;
@@ -115,16 +123,27 @@ export const consumeToken = async (tokenHash) => {
   tokens.delete(tokenHash);
 };
 
-/** Asking for a new link retires the earlier ones, so an old mail stops working. */
-export const deleteUserTokens = async (userId, purpose) => {
-  for (const [key, row] of tokens) {
-    if (row.userId === Number(userId) && row.purpose === purpose) tokens.delete(key);
-  }
-};
-
 export const setPassword = async (id, passwordHash) => {
   const user = users.get(Number(id));
   if (user) user.password_hash = passwordHash;
+};
+
+/** Serialises one link's complete redemption flow, including external work. */
+export const withTokenLock = async (tokenHash, work) => {
+  const key = String(tokenHash);
+  const previous = tokenLocks.get(key) ?? Promise.resolve();
+  let release;
+  const gate = new Promise((resolve) => (release = resolve));
+  const tail = previous.catch(() => undefined).then(() => gate);
+  tokenLocks.set(key, tail);
+
+  await previous.catch(() => undefined);
+  try {
+    return await work();
+  } finally {
+    release();
+    if (tokenLocks.get(key) === tail) tokenLocks.delete(key);
+  }
 };
 
 
@@ -136,5 +155,6 @@ export const close = async () => {
   users.clear();
   sessions.clear();
   tokens.clear();
+  tokenLocks.clear();
   nextUserId = 1;
 };

@@ -71,8 +71,10 @@ npm run dev:web   # Vite on 5173, proxying /api to the server on 3000
 ```
 
 Anything that is not `/api/…` and not a file on disk is answered with
-`index.html`, because `/verify?token=…` is a URL somebody opens from their mail
-rather than a route the server handles.
+`index.html`, because `/verify#token=…` is a URL somebody opens from their mail
+rather than a route the server handles. The credential sits after `#`, which
+browsers do not send in HTTP requests or Referer headers, and the page removes
+it from the address bar as soon as it has been read.
 
 Two columns. The left one holds who you are signed in as — or a login form when
 nobody is — and the navigation, so it is always reachable and the main column is
@@ -92,26 +94,31 @@ they do and nothing narrates.
 | Variable | Default | Meaning |
 |---|---|---|
 | `ODW_HOST` / `ODW_PORT` | `127.0.0.1` / `3000` | Bind address |
+| `ODW_TRUST_PROXY` | disabled | Set `1` only when direct access is blocked and one trusted proxy supplies client addresses |
+| `ODW_ALLOW_INSECURE_REMOTE` | disabled | Permit an acknowledged HTTP development bind outside loopback |
 | `ODW_STORAGE` | `postgres` | `postgres` or `memory` |
 | `ODW_DATABASE_URL` | the game's dev database | Where the `web` schema lives |
 | `ODW_SESSION_SECRET` | — | Signs the session cookie; at least 32 characters |
 | `ODW_SESSION_TTL_MS` | 14 days | How long a signed-in session lasts |
 | `ODW_COOKIE_SECURE` | on under `NODE_ENV=production` | Refuse to send the cookie over plain HTTP |
 | `ODW_GAME_INTERNAL_URL` | `http://127.0.0.1:8081` | The game server's internal API |
-| `ODW_GAME_INTERNAL_TOKEN` | — | Must match the game server's `ODS_INTERNAL_TOKEN` |
+| `ODW_GAME_INTERNAL_TOKEN` | — | At least 32 characters; must match the game server's `ODS_INTERNAL_TOKEN` |
+| `ODW_GAME_REQUEST_TIMEOUT_MS` | `5000` | Deadline for one internal game-server call |
+| `ODW_ALLOW_INSECURE_GAME_INTERNAL` | disabled | Permit cleartext internal traffic outside loopback on an explicitly trusted private network |
 | `ODW_PUBLIC_URL` | `http://127.0.0.1:3000` | Where confirmation links point |
 | `ODW_LINK_TTL_MS` | 24 hours | How long a mailed link lasts — confirmation and reset alike |
 | `ODW_GAME_ADDRESS` | `http://127.0.0.1:8080` | Shown to players for their client configuration |
 | `ODW_SMTP_URL` | — | SMTP connection string; unset logs the link instead of sending |
 | `ODW_MAIL_FROM` | `no-reply@localhost` | Sender address |
 
-The three without defaults are checked at startup, so a misconfigured
-deployment fails on the command that started it rather than on somebody's first
-sign-up.
+The values without safe defaults are checked at startup. Under
+`NODE_ENV=production`, startup also requires HTTPS public links, secure cookies,
+SMTP, an explicit database URL and persistent storage; confirmation/reset links are never silently
+written into production logs.
 
 ## API
 
-Every state-changing call carries a CSRF token from `GET /api/csrf` as
+Every state-changing call, including market actions, carries a CSRF token from `GET /api/csrf` as
 `X-CSRF-Token`. Signing in regenerates the session, which discards the token
 with it — fetch a fresh one afterwards.
 

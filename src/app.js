@@ -69,15 +69,44 @@ export const buildApp = async ({
   rateLimited = true,
   logger = false,
 } = {}) => {
-  const app = Fastify({ logger, trustProxy: true });
+  const app = Fastify({
+    logger,
+    trustProxy: config.trustProxy,
+    bodyLimit: 64 * 1024,
+    requestTimeout: 15_000,
+    connectionTimeout: 10_000,
+  });
 
   app.decorate("game", game);
   app.decorate("mailer", mailer ?? (await createMailer()));
 
   await app.register(helmet, {
-    // Set once the front end is built and its own sources are known; a policy
-    // written before there is anything to allow is a policy nobody can check.
-    contentSecurityPolicy: false,
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        baseUri: ["'self'"],
+        connectSrc: ["'self'"],
+        fontSrc: ["'self'"],
+        formAction: ["'self'"],
+        frameAncestors: ["'none'"],
+        imgSrc: ["'self'", "data:"],
+        objectSrc: ["'none'"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'"],
+        upgradeInsecureRequests: null,
+      },
+    },
+    referrerPolicy: { policy: "no-referrer" },
+  });
+
+  // API responses include email addresses, CSRF secrets and occasionally a
+  // bearer token. None belongs in a browser or intermediary cache.
+  app.addHook("onSend", async (request, reply, payload) => {
+    if (request.url.startsWith("/api/")) {
+      reply.header("Cache-Control", "no-store");
+      reply.header("Pragma", "no-cache");
+    }
+    return payload;
   });
 
   if (rateLimited) {
@@ -124,7 +153,7 @@ export const buildApp = async ({
 
     /**
      * The front end owns its own paths, and a confirmation link points at one
-     * of them. `/verify?token=…` is a real URL somebody opens from their mail,
+     * of them. `/verify#token=…` is a real URL somebody opens from their mail,
      * not a route this server has a handler for, so anything that is not the
      * API and not a file on disk is answered with the application itself and
      * routed once it is running.

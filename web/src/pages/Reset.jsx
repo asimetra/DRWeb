@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { api, ApiError } from "../api.js";
 import { Box, Button, Buttons, Field, Footnote, Notice, Quiet, Page } from "../components/Chrome.jsx";
@@ -7,18 +7,28 @@ import { GameToken } from "../components/GameToken.jsx";
 
 export const Reset = () => {
   const [params] = useSearchParams();
+  const linkToken = useRef(
+    params.get("token") || new URLSearchParams(window.location.hash.slice(1)).get("token")
+  ).current;
   const { refresh } = useViewer();
   const [password, setPassword] = useState("");
   const [problem, setProblem] = useState("");
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(null);
 
+  useEffect(() => {
+    const clean = new URL(window.location.href);
+    clean.searchParams.delete("token");
+    clean.hash = "";
+    window.history.replaceState({}, "", `${clean.pathname}${clean.search}`);
+  }, []);
+
   const submit = async (event) => {
     event.preventDefault();
     setProblem("");
     setBusy(true);
     try {
-      setDone(await api.resetPassword({ token: params.get("token"), password }));
+      setDone(await api.resetPassword({ token: linkToken, password }));
       await refresh();
     } catch (failure) {
       setProblem(failure instanceof ApiError ? failure.message : "Something went wrong.");

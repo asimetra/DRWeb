@@ -7,6 +7,9 @@ import { GameToken } from "../components/GameToken.jsx";
 
 export const Verify = () => {
   const [params] = useSearchParams();
+  const linkToken = useRef(
+    params.get("token") || new URLSearchParams(window.location.hash.slice(1)).get("token")
+  ).current;
   const { refresh } = useViewer();
   const [state, setState] = useState({ status: "working" });
 
@@ -21,13 +24,17 @@ export const Verify = () => {
     if (started.current) return;
     started.current = true;
 
-    const token = params.get("token");
-    if (!token) {
+    const clean = new URL(window.location.href);
+    clean.searchParams.delete("token");
+    clean.hash = "";
+    window.history.replaceState({}, "", `${clean.pathname}${clean.search}`);
+
+    if (!linkToken) {
       setState({ status: "failed", problem: "This link has no token in it." });
       return;
     }
 
-    api.verify(token).then(
+    api.verify(linkToken).then(
       (result) => {
         setState({ status: "done", ...result });
         // Confirming signs you in, so the header has to hear about it.
@@ -39,7 +46,7 @@ export const Verify = () => {
           problem: failure instanceof ApiError ? failure.message : "Something went wrong.",
         })
     );
-  }, [params, refresh]);
+  }, [linkToken, refresh]);
 
   if (state.status === "working") {
     return (

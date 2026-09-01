@@ -71,7 +71,7 @@ export const marketRoutes = async (app) => {
     app.game.readStall(request.user.account_id)
   );
 
-  app.post("/api/market", { onRequest: requireTrader }, async (request, reply) => {
+  app.post("/api/market", { onRequest: [requireTrader, app.csrfProtection] }, async (request, reply) => {
     try {
       return await app.game.listForSale(
         request.user.account_id,
@@ -83,7 +83,7 @@ export const marketRoutes = async (app) => {
     }
   });
 
-  app.post("/api/market/:id/buy", { onRequest: requireTrader }, async (request, reply) => {
+  app.post("/api/market/:id/buy", { onRequest: [requireTrader, app.csrfProtection] }, async (request, reply) => {
     try {
       return await app.game.buyListing(request.params.id, request.user.account_id);
     } catch (problem) {
@@ -91,7 +91,7 @@ export const marketRoutes = async (app) => {
     }
   });
 
-  app.post("/api/market/:id/cancel", { onRequest: requireTrader }, async (request, reply) => {
+  app.post("/api/market/:id/cancel", { onRequest: [requireTrader, app.csrfProtection] }, async (request, reply) => {
     try {
       return await app.game.cancelListing(request.params.id, request.user.account_id);
     } catch (problem) {
@@ -99,7 +99,7 @@ export const marketRoutes = async (app) => {
     }
   });
 
-  app.post("/api/market/claim", { onRequest: requireTrader }, async (request, reply) => {
+  app.post("/api/market/claim", { onRequest: [requireTrader, app.csrfProtection] }, async (request, reply) => {
     try {
       return await app.game.claimProceeds(request.user.account_id);
     } catch (problem) {

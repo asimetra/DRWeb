@@ -49,10 +49,10 @@ const resetMessage = (email, link) => ({
  * clicked. So the link opens a page, and the page posts the token.
  */
 export const verificationLink = (token) =>
-  `${config.publicUrl}/verify?token=${encodeURIComponent(token)}`;
+  `${config.publicUrl}/verify#token=${encodeURIComponent(token)}`;
 
 export const resetLink = (token) =>
-  `${config.publicUrl}/reset?token=${encodeURIComponent(token)}`;
+  `${config.publicUrl}/reset#token=${encodeURIComponent(token)}`;
 
 /** Writes what it would have sent. The default, and never the right one in production. */
 const notSent = (subject, email, link) =>
