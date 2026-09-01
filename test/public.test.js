@@ -197,3 +197,88 @@ test("a game server that is not answering leaves the page standing", async () =>
   assert.deepEqual(response.json(), { reachable: false });
   await downApp.close();
 });
+
+/* ----------------------------------------------------------------- shop - */
+
+/**
+ * The shop is open for the same reason the boards are: it is a shop window, and
+ * asking somebody for a password to look through one is absurd. Nothing behind
+ * it belongs to anybody, so there is no session to consult and none is started.
+ */
+const shopCalls = [];
+const shopApp = await buildApp({
+  rateLimited: false,
+  mailer: {},
+  game: {
+    async readShop(options) {
+      shopCalls.push(["shop", options]);
+      if (options.day === "broken") throw new GameServerError(503, "game server unreachable");
+      return { day: "2026-09-01", today: "2026-09-01", days: ["2026-09-01"], offers: [] };
+    },
+    async readShopSchedule(options) {
+      shopCalls.push(["schedule", options]);
+      return { results: [], total: 0, facets: { rarities: [] } };
+    },
+  },
+});
+await shopApp.ready();
+after(() => shopApp.close());
+
+test("the shop is readable without signing in", async () => {
+  forgetBoards();
+  const response = await shopApp.inject({ method: "GET", url: "/api/shop" });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.json().day, "2026-09-01");
+  assert.equal(response.cookies.length, 0, "and starts no session");
+});
+
+/**
+ * The shelf changes once a day and this is a route anybody on the internet can
+ * call, so the same question is not carried through to the game server for
+ * everybody who asks it.
+ */
+test("a day already fetched is not fetched again for the next reader", async () => {
+  forgetBoards();
+  shopCalls.length = 0;
+  await shopApp.inject({ method: "GET", url: "/api/shop" });
+  await shopApp.inject({ method: "GET", url: "/api/shop" });
+
+  assert.equal(shopCalls.length, 1);
+});
+
+/**
+ * A search is one question per person typing. Remembering every phrase anybody
+ * has tried would be a way of filling this process's memory from the outside,
+ * so only the plain list — the one everybody lands on — is held.
+ */
+test("a searched schedule is asked every time; an unsearched one is not", async () => {
+  forgetBoards();
+  shopCalls.length = 0;
+  await shopApp.inject({ method: "GET", url: "/api/shop/schedule?q=muramasa" });
+  await shopApp.inject({ method: "GET", url: "/api/shop/schedule?q=muramasa" });
+  assert.equal(shopCalls.length, 2);
+
+  shopCalls.length = 0;
+  await shopApp.inject({ method: "GET", url: "/api/shop/schedule" });
+  await shopApp.inject({ method: "GET", url: "/api/shop/schedule" });
+  assert.equal(shopCalls.length, 1);
+});
+
+test("what a caller may ask for is clamped before the game server sees it", async () => {
+  forgetBoards();
+  shopCalls.length = 0;
+  await shopApp.inject({ method: "GET", url: "/api/shop?days=100000" });
+  assert.equal(shopCalls.at(-1)[1].days, 60);
+
+  await shopApp.inject({ method: "GET", url: "/api/shop/schedule?limit=100000&offset=-5" });
+  assert.deepEqual(shopCalls.at(-1)[1], { q: "", rarity: 0, from: "", limit: 100, offset: 0 });
+});
+
+test("a game server that cannot be reached leaves the shop saying so", async () => {
+  forgetBoards();
+  const response = await shopApp.inject({ method: "GET", url: "/api/shop?day=broken" });
+
+  assert.equal(response.statusCode, 503);
+  assert.ok(response.json().error);
+});

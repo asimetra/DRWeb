@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Exports the market's weapon icons from a copy of the game you already have.
+ * Exports the market's icons from a copy of the game you already have.
  *
  *   node tools/export-icons.js --path ~/.steam/steam/steamapps/common/DungeonRampage/Resources
  *   node tools/export-icons.js --path /path/to/Resources --dry
@@ -23,10 +23,17 @@
  * files byte for byte identical — checked, not assumed — so `--path` only has to
  * point at either `Resources` directory.
  *
- * The names come from the game's own tables rather than from the SWFs. Each
- * WeaponAesthetics row names an icon and the file it lives in; ffdec exports a
- * sprite as `DefineSprite_<id>_<class>/1.png`, and that class is the icon name.
- * Anything exported that no row asks for is scenery and is left behind.
+ * The names come from the game's own tables rather than from the SWFs. A table
+ * row names an icon; ffdec exports a sprite as `DefineSprite_<id>_<class>/1.png`,
+ * and that class is the icon name. Anything exported that no row asks for is
+ * scenery and is left behind — the modifier file alone carries twice what the
+ * market draws, most of it the infinite dungeon's.
+ *
+ * Two kinds of picture, because the market draws two: the weapon, and the
+ * modifiers rolled onto it. They land in one directory because the game's icon
+ * names are already distinct across the tables — checked, not assumed — and the
+ * name is what the site asks for, so a directory per table would only be a
+ * second thing to keep in step.
  */
 import fs from "node:fs/promises";
 import fsSync from "node:fs";
@@ -42,6 +49,43 @@ const argument = (name) => {
   return at === -1 ? null : process.argv[at + 1] ?? null;
 };
 const dry = process.argv.includes("--dry");
+
+/**
+ * The one path the tables do not say.
+ *
+ * A weapon's aesthetic row names the file its icon lives in, so a weapon added
+ * to the tables is found without this script being edited. A modifier's row
+ * names an icon and stops — every one of them, rolled and legendary alike, is
+ * in this single file beside the weapons'.
+ */
+const MODIFIER_SWF = "Art2D/Icons/Modifier/db_icons_modifier.swf";
+
+/**
+ * Which icons to go looking for, and which file to open for each.
+ *
+ * Grouped by file rather than listed flat because ffdec is opened once per SWF
+ * and exports the whole thing: thirteen weapon files and one modifier file is
+ * fourteen runs, and asking per icon would be two hundred and sixty.
+ */
+const wanted = (gameMaster) => {
+  const bySwf = new Map();
+  const add = (file, name) => {
+    if (!file || !name) return;
+    if (!bySwf.has(file)) bySwf.set(file, new Set());
+    bySwf.get(file).add(name);
+  };
+
+  for (const row of gameMaster.WeaponAesthetics ?? []) {
+    add(row.UISwfFilepath?.replace(/^Resources\//, ""), row.IconName);
+  }
+  /* The two rolled onto any weapon and the third only a legendary carries. The
+     game keeps them in separate tables and the market draws them apart, but
+     they are one file and one kind of picture. */
+  for (const table of ["Modifiers", "LegendaryModifiers"]) {
+    for (const row of gameMaster[table] ?? []) add(MODIFIER_SWF, row.IconName);
+  }
+  return bySwf;
+};
 
 /**
  * Whichever ffdec is installed.
@@ -100,14 +144,7 @@ const main = async () => {
   }
   const gameMaster = JSON.parse(await fs.readFile(tables, "utf8"));
 
-  /* Which file each icon lives in, taken from the game's own table so that a
-     weapon added to the tables is found without this script being edited. */
-  const bySwf = new Map();
-  for (const row of gameMaster.WeaponAesthetics ?? []) {
-    if (!row.IconName || !row.UISwfFilepath) continue;
-    if (!bySwf.has(row.UISwfFilepath)) bySwf.set(row.UISwfFilepath, new Set());
-    bySwf.get(row.UISwfFilepath).add(row.IconName);
-  }
+  const bySwf = wanted(gameMaster);
 
   const out = argument("out") ? path.resolve(argument("out")) : path.join(root, "web/public/icons");
   // Inside the repository, not /tmp: see `decompiler` above.
@@ -119,7 +156,7 @@ const main = async () => {
   const missing = [];
 
   for (const [relative, names] of bySwf) {
-    const swf = path.join(resources, relative.replace(/^Resources\//, ""));
+    const swf = path.join(resources, relative);
     if (!fsSync.existsSync(swf)) {
       console.warn(`  ${relative}: not in this copy of the game, skipped`);
       for (const name of names) missing.push(name);

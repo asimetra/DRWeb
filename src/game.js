@@ -112,6 +112,31 @@ export const readMarket = (options = {}) => {
 };
 
 /**
+ * The shop, which is the market's opposite in every way that matters here.
+ *
+ * The market is other players and is state; the shop is the game's own shelf,
+ * twenty-two weapons that turn over at nine every morning on a schedule already
+ * written into the game's tables months ahead. So nothing is owned, nothing is
+ * asked for on anybody's behalf, and neither of these takes an account id —
+ * there is nothing to do with one. Reading only: buying happens in the client,
+ * against the account it is logged in as.
+ */
+export const readShop = (options = {}) => {
+  const query = new URLSearchParams(
+    Object.entries(options).filter(([, value]) => value !== undefined && value !== null && value !== "")
+  );
+  return call("GET", `/internal/v1/shop?${query}`);
+};
+
+/** When a weapon is next on that shelf — the one thing showing today cannot say. */
+export const readShopSchedule = (options = {}) => {
+  const query = new URLSearchParams(
+    Object.entries(options).filter(([, value]) => value !== undefined && value !== null && value !== "")
+  );
+  return call("GET", `/internal/v1/shop/schedule?${query}`);
+};
+
+/**
  * Somebody's profile, by name. Names are unique and the account id is the
  * number the client authenticates with, so this is the one address a profile
  * can be linked by without handing out a credential.

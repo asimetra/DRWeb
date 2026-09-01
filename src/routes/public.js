@@ -11,36 +11,47 @@ import { GameServerError } from "../game.js";
  */
 
 /**
- * Standings, briefly remembered.
+ * Answers, briefly remembered.
  *
- * The boards live behind the game server's internal API, which a browser
- * cannot reach and must not be able to — the credential that opens it answers
- * for every account. So this proxies, and because it is the one route here
- * that anybody on the internet can call without an account, it does not pass
- * every call through: a board changes when somebody finishes a run, and
- * fifteen seconds of staleness is invisible next to that.
+ * What is behind these routes lives on the game server's internal API, which a
+ * browser cannot reach and must not be able to — the credential that opens it
+ * answers for every account. So this proxies, and because these are the routes
+ * anybody on the internet can call without an account, they do not pass every
+ * call through.
+ *
+ * How long is worth remembering is the caller's to say, because it is a fact
+ * about the answer rather than about the cache: a board changes when somebody
+ * finishes a run and fifteen seconds is invisible next to that, while the shop
+ * changes once a day and would happily be held for an hour if it were not for
+ * the minute either side of nine.
  */
-const CACHE_MS = 15_000;
 const remembered = new Map();
 
 export const forgetBoards = () => remembered.clear();
 
-const boardVia = async (game, metric, scope) => {
-  const key = `${metric}?${new URLSearchParams(scope)}`;
+const briefly = async (key, ms, answer) => {
   const held = remembered.get(key);
-  if (held && Date.now() - held.at < CACHE_MS) return held.board;
+  if (held && Date.now() - held.at < ms) return held.value;
 
-  const board = await game.readBoard(metric, scope);
-  remembered.set(key, { at: Date.now(), board });
+  const value = await answer();
+  remembered.set(key, { at: Date.now(), value, ms });
 
   // Swept while somebody is asking, so an idle process holds no work.
   if (remembered.size > 200) {
     for (const [other, entry] of remembered) {
-      if (Date.now() - entry.at >= CACHE_MS) remembered.delete(other);
+      if (Date.now() - entry.at >= entry.ms) remembered.delete(other);
     }
   }
-  return board;
+  return value;
 };
+
+const BOARD_MS = 15_000;
+const SHOP_MS = 30_000;
+
+const boardVia = (game, metric, scope) =>
+  briefly(`board:${metric}?${new URLSearchParams(scope)}`, BOARD_MS, () =>
+    game.readBoard(metric, scope)
+  );
 
 export const publicRoutes = async (app) => {
   app.get("/api/server", async () => ({
@@ -93,5 +104,58 @@ export const publicRoutes = async (app) => {
         .code(failure.status === 404 || failure.status === 400 ? failure.status : 503)
         .send({ error: failure.message });
     }
+  });
+
+  /**
+   * The shop, open like the boards are and for the same reason.
+   *
+   * It is the one page here that has nothing to do with having an account: what
+   * the game is selling today, and what it will be selling next month. Somebody
+   * who has not installed the client yet is a fair reader of it, and asking
+   * them to sign up first would be asking for a password to see a shop window.
+   *
+   * Nothing is interpreted on the way past. Which day is in progress, how far
+   * the schedule runs and what an offer *is* are all answers about the game's
+   * tables, and this side holds none of them — the same division the market
+   * keeps. See the game server's `store-rotation`.
+   */
+  const shopVia = async (request, reply, read, key) => {
+    try {
+      return key === null ? await read() : await briefly(key, SHOP_MS, read);
+    } catch (failure) {
+      if (!(failure instanceof GameServerError)) throw failure;
+      request.log.warn(`shop: ${failure.message}`);
+      return reply.code(failure.status === 400 ? 400 : 503).send({ error: failure.message });
+    }
+  };
+
+  app.get("/api/shop", async (request, reply) => {
+    const day = String(request.query?.day ?? "").slice(0, 10);
+    const days = Math.max(1, Math.min(60, Number(request.query?.days) || 14));
+    return shopVia(request, reply, () => app.game.readShop({ day, days }), `shop:${day}:${days}`);
+  });
+
+  /**
+   * `GET /api/shop/schedule` — when is this next on the shelf?
+   *
+   * Not cached alongside the day, and not because it is expensive: a search is
+   * one query per person typing, so a shared cache of every phrase anybody has
+   * tried is a way of filling this process's memory from the outside. Only the
+   * unsearched view — the plain list of what is coming — is worth holding, and
+   * that is the one everybody lands on.
+   */
+  app.get("/api/shop/schedule", async (request, reply) => {
+    const options = {
+      q: String(request.query?.q ?? "").slice(0, 64),
+      rarity: Math.max(0, Math.min(9, Number(request.query?.rarity) || 0)),
+      from: String(request.query?.from ?? "").slice(0, 10),
+      limit: Math.max(1, Math.min(100, Number(request.query?.limit) || 40)),
+      offset: Math.max(0, Math.min(1_000_000, Number(request.query?.offset) || 0)),
+    };
+    const read = () => app.game.readShopSchedule(options);
+    if (options.q) return shopVia(request, reply, read, null);
+
+    const key = `schedule:${options.rarity}:${options.from}:${options.limit}:${options.offset}`;
+    return shopVia(request, reply, read, key);
   });
 };

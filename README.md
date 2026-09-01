@@ -136,6 +136,8 @@ with it — fetch a fresh one afterwards.
 | `POST /api/password/reset` | Sets a new password, ends every session, revokes the game token |
 | `POST /api/password` | Changes a password you already know |
 | `GET /api/inventory` | Your unequipped weapons and gold |
+| `GET /api/shop` | A day of the game's own shelf, and the days around it. **Open** |
+| `GET /api/shop/schedule` | When a weapon is next on that shelf. **Open** |
 | `GET /api/market` | Everything up for sale — open, no sign-in needed |
 | `GET /api/market/stall` | Your own: what is up, what sold, what is owed |
 | `POST /api/market` | Puts a weapon up at a price |
@@ -149,10 +151,10 @@ with it — fetch a fresh one afterwards.
 
 ## What is public
 
-The front page and the leaderboards need no account. A
-server people are being invited to play on has to be able to say what it is and
-who is doing well on it before it asks them for an address and a password, and
-until now `/` was a redirect to a login form.
+The front page, the leaderboards, the market and the shop need no account. A
+server people are being invited to play on has to be able to say what it is,
+who is doing well on it and what it sells before it asks them for an address and
+a password, and until now `/` was a redirect to a login form.
 
 The boards live behind the game server's internal API, which a browser cannot
 reach and must not be able to — the credential that opens it answers for every
@@ -249,6 +251,29 @@ the response also carries filter facets and the total match count. Listing
 payloads include the rarity name, shop value and which heroes can equip the
 weapon, so the browser does not need a second copy of GameMaster data.
 
+## The shop
+
+The market's opposite, and a separate page for that reason. The market is other
+players and everything on it is somebody's decision; the shop is the game's own
+shelf — twenty-two weapons at a fixed price that turn over at 09:00 UTC every
+day. Nobody negotiates with it and nothing on it is owned, so nothing here needs
+an account and no route takes one.
+
+**Nothing is bought here.** Buying happens in the client, against the account it
+is logged in as. A website that could spend somebody's gold is a different and
+much larger question, and this page asks none of it.
+
+What it is for is the two questions the game's own shop screen cannot answer:
+what is on the shelf tomorrow, and when is the one I want coming back. Both are
+already written down — every weapon offer in `Offers` carries a `StartDate` and
+an `EndDate`, and the schedule they describe runs months out. The game server
+reads it (`store-rotation.js`); this side asks and draws.
+
+An offer is described by the same code that describes a market listing, so the
+card is the same card: the same icon, the same modifier lines, the same rarity
+frame. That is deliberate — a weapon should not look like two different things
+depending on which page it is on.
+
 ## Tests
 
 ```bash
@@ -267,11 +292,12 @@ and documents it in its own `NOTICE.md`; that boundary is that project's, and
 this repository does not claim to keep one of its own. What ships with the site
 is whatever its operator decides ships with it.
 
-## Weapon icons from your own copy
+## Icons from your own copy
 
-The market draws a weapon's own icon when the deployment has one. This
-repository ships none: `tools/export-icons.js` reads them out of a copy of the
-game you already have, and they stay on your machine.
+The market draws a weapon's own icon, and the icons for the modifiers rolled
+onto it, when the deployment has them. This repository ships none:
+`tools/export-icons.js` reads them out of a copy of the game you already have,
+and they stay on your machine.
 
 ```
 node tools/export-icons.js --path <the game's Resources directory>
@@ -279,14 +305,16 @@ node tools/export-icons.js --path <the game's Resources directory>
 
 Either build works — the Steam SWF one and the Haxe one carry these files byte
 for byte identical. It needs [ffdec](https://github.com/jindrapetrik/jpexs-decompiler),
-found on PATH or as the `com.jpexs.decompiler.flash` flatpak, and it writes 226
-icons into `web/public/icons/`, which is git-ignored. The seven it reports
-missing are enemy weapons from a file the Steam build does not carry — nothing a
-player can hold.
+found on PATH or as the `com.jpexs.decompiler.flash` flatpak, and it writes 260
+icons into `web/public/icons/`, which is git-ignored: 226 weapons and the 34
+modifiers, ordinary and legendary. The seven it reports missing are enemy
+weapons from a file the Steam build does not carry — nothing a player can hold.
 
-The game server decides *which* of a weapon's ten looks a listing wears, since
-that is a rule about its tables; this side only serves the file. Without the
-files the market draws its frame and the weapon's type instead: duller, not
+The game server names the pictures: *which* of a weapon's ten looks a listing
+wears is a rule about its tables, and so is which of twenty-two icons stands for
+a modifier when a hundred and twenty of them share them. This side only serves
+the file. Without the files the market draws its frame and the weapon's type
+instead, and the modifiers stay as the sentences they already were: duller, not
 broken.
 
 ## The picture and the face
