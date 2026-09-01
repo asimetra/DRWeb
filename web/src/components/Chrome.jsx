@@ -427,6 +427,12 @@ const Menu = () => {
         <li>
           <NavLink to="/market">Market</NavLink>
         </li>
+        {/* Beside the market rather than under it: what the game sells and what
+            players sell each other are two places to look for a weapon, and
+            somebody deciding where to spend is choosing between them. */}
+        <li>
+          <NavLink to="/shop">Shop</NavLink>
+        </li>
         <li>
           <NavLink to="/account">My account</NavLink>
         </li>

@@ -1,25 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, ApiError } from "../api.js";
-import { Box, Button, Buttons, Notice, Page } from "../components/Chrome.jsx";
+import { Box, Button, Notice, Page } from "../components/Chrome.jsx";
 import { useViewer } from "../viewer.jsx";
 import { asText, since, tierOf, typeOf } from "../market-view.js";
-
-/**
- * The weapon icons a deployment exported for itself with tools/export-icons.js.
- *
- * Served by this site from web/public/, not fetched from the game server. They
- * are the game's art so they are not in the repository — but they are a web
- * page's decoration, and asking a game server for it only made the pictures
- * break whenever that server did.
- *
- * Not imported the way the hero portraits are: those are six files that ship
- * with the build, these are two hundred and twenty-six that may not be there at
- * all.
- */
-const WEAPON_ICONS = "/icons/";
-
-const whole = new Intl.NumberFormat("en-GB");
+import { Detail, Gold, Sigil, WeaponMark, whole } from "../components/Item.jsx";
 
 /**
  * Rarity is the one saturated thing on the site, and it means the same here as
@@ -28,180 +13,34 @@ const whole = new Intl.NumberFormat("en-GB");
 const PAGE_SIZE = 12;
 const EMPTY_FACETS = { types: [], rarities: [], heroes: [] };
 
+/** A page of the bag. Twenty-four tiles is a screenful, not a scroll. */
+const BAG_PAGE_SIZE = 24;
+
 /**
- * The whole item, read downwards: what it is, what it is worth swinging, and
- * what has been rolled onto it.
- *
- * Stacked rather than run together on one line because that is how it is read
- * — nobody compares two weapons by scanning a sentence — and the order is the
- * order somebody decides in: is this my kind of weapon, is it strong enough,
- * can I use it, what does it do.
- *
- * Every word is the game server's answer. A modifier is a number in the row
- * and this side holds no game data to turn 70211 into "Chargey", which is the
- * arrangement the pair is built on. See `describeListings`.
+ * What the bag's search answers to: the weapon's name, its kind, and what has
+ * been rolled onto it — the words somebody hunts a weapon by, which is the
+ * same list the market board's own search takes from the game server.
  */
-const Detail = ({ listing }) => {
-  const modifiers = listing.modifiers ?? [];
-  const weapon = listing.weapon;
-  return (
-    <div className="item">
-      <div className={`item__name title--${tierOf(listing.rarity)}`}>
-        {listing.name ?? `item ${listing.item_id}`}
-      </div>
-      {listing.mastertype ? (
-        <div className="item__type">
-          {typeOf(listing.mastertype)}
-          {weapon?.classType ? ` · ${weapon.classType.toLowerCase()}` : ""}
-        </div>
-      ) : null}
-      {listing.usable_by?.length ? (
-        <div className="item__fits">
-          For {listing.usable_by.map((hero) => hero.name).join(", ")}
-        </div>
-      ) : null}
-
-      <dl className="item__stats">
-        {listing.power ? (
-          <>
-            <dt>Power</dt>
-            <dd>{whole.format(listing.power)}</dd>
-          </>
-        ) : null}
-        {weapon?.speed ? (
-          <>
-            <dt>Speed</dt>
-            <dd>{weapon.speed.toLowerCase()}</dd>
-          </>
-        ) : null}
-        {listing.requiredlevel ? (
-          <>
-            <dt>Level</dt>
-            <dd>{listing.requiredlevel}</dd>
-          </>
-        ) : null}
-        {listing.vendor_value ? (
-          <>
-            <dt>Shop value</dt>
-            <dd>{whole.format(listing.vendor_value)}</dd>
-          </>
-        ) : null}
-      </dl>
-
-      {/* Its two attacks, which are the weapon rather than the roll: every
-          Hand Axe has these and no two weapon types share them. */}
-      {weapon?.tap?.title || weapon?.hold?.title ? (
-        <div className="item__attacks">
-          {weapon.tap?.title ? (
-            <div className="item__attack">
-              <span className="item__attack-name">{weapon.tap.title}</span>
-              {weapon.tap.description ? <p>{weapon.tap.description}</p> : null}
-            </div>
-          ) : null}
-          {weapon.hold?.title ? (
-            <div className="item__attack">
-              <span className="item__attack-name">{weapon.hold.title}</span>
-              {weapon.hold.manaCost ? (
-                <span className="item__mana"> · {weapon.hold.manaCost} mana</span>
-              ) : null}
-              {weapon.hold.description ? <p>{weapon.hold.description}</p> : null}
-            </div>
-          ) : null}
-        </div>
-      ) : null}
-
-      {modifiers.length || listing.legendary ? (
-        <div className="item__mods">
-          {modifiers.map((modifier) => (
-            <div className="item__mod" key={modifier.id}>
-              {modifier.description ?? modifier.name}
-            </div>
-          ))}
-          {/* Apart, the way the game keeps it apart: only the top rarity
-              carries a third, and it is the line that weapon is bought for. */}
-          {listing.legendary ? (
-            <div className="item__mod item__mod--legendary">
-              {listing.legendary.description ?? listing.legendary.name}
-            </div>
-          ) : null}
-        </div>
-      ) : null}
-    </div>
-  );
+const wantedBy = (item, wanted) => {
+  const hay = [
+    item.name,
+    typeOf(item.mastertype),
+    ...(item.modifiers ?? []).map((modifier) => `${modifier.name} ${modifier.description ?? ""}`),
+    ...(item.legendary ? [`${item.legendary.name} ${item.legendary.description ?? ""}`] : []),
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  return hay.includes(wanted);
 };
 
-/**
- * The same weapon on one line, for the lists that are an aside rather than the
- * page: your own stall, and what has sold. The full card is for choosing
- * between things; here you already know which one it is.
- */
-const Line = ({ listing }) => (
-  <>
-    <span className={`title title--${tierOf(listing.rarity)}`}>
-      {listing.name ?? `item ${listing.item_id}`}
-    </span>
-    {listing.power ? <span className="table__quiet"> · power {listing.power}</span> : null}
-  </>
-);
-
-const Gold = ({ children }) => (
-  <span className="gold">{whole.format(Number(children ?? 0))}</span>
-);
-
-/**
- * The left of the three, where a trade site puts the item's picture.
- *
- * The picture is the weapon's own icon when the deployment has exported one,
- * and its type and rarity in words when it has not — neither is a placeholder
- * for the other. Nothing ships an icon: the art belongs to the game, so a
- * deployment reads it out of a copy of the game with the server's
- * tools/export-icons.js and serves it from /content/. A site that never runs
- * that still has a frame worth looking at.
- *
- * The frame wears the rarity either way, which is the same ladder the rank
- * colours and the title tiers use.
- */
-const Sigil = ({ listing }) => {
-  const tier = tierOf(listing.rarity);
-  const type = typeOf(listing.mastertype);
-  /*
-   * The weapon's own icon when the deployment has it. Nothing ships one — see
-   * the server's tools/export-icons.js — so the frame has to stand on its own
-   * either way, and the initials stay underneath as what shows when it cannot
-   * be loaded rather than as a placeholder that gets replaced.
-   */
-  const icon = listing.icon ? `${WEAPON_ICONS}${listing.icon}.png` : null;
-  return (
-    <div className={`sigil sigil--${tier}`}>
-      <span
-        className={icon ? "sigil__mark sigil__mark--art" : "sigil__mark"}
-        aria-hidden="true"
-        style={icon ? { backgroundImage: `url(${icon})` } : undefined}
-      >
-        {icon ? "" : (type || "?").slice(0, 2).toUpperCase()}
-      </span>
-      <span className="sigil__type">{type || "weapon"}</span>
-      {/* Not `title--${tier}`. A saturated word in a small box reads as an
-          indicator lamp rather than a rarity — the frame around it already
-          carries the colour, and the ladder's saturation is spent on titles
-          and item names, which is where it means something. */}
-      <span className="sigil__tier">{tier}</span>
-    </div>
-  );
-};
-
-/**
- * The right of the three: what it costs, who is asking, and what you can do.
- *
- * Its own panel rather than three things loose at the end of the row. Down a
- * list of twenty, the price has to land in the same place every time or the
- * column cannot be read at all — and the seller belongs under the price rather
- * than above it, because the number is what the eye is scanning for and the
- * name is what it checks once it has stopped.
- */
-const Deal = ({ listing, mine, canBuy, onBuy }) => {
+/*
+ * The copy button, drawn as the corner mark it is rather than a word in the
+ * deal panel. The one thing a trade site is asked for outside itself: paste
+ * this card into a chat and ask whether it is worth the money. It answers
+ * with its own colour for a moment — a word would have needed a column.
+ */const CopyMark = ({ listing }) => {
   const [copied, setCopied] = useState(false);
-  const listed = since(listing.listed_at);
 
   const copy = async () => {
     try {
@@ -214,40 +53,86 @@ const Deal = ({ listing, mine, canBuy, onBuy }) => {
   };
 
   return (
-    <div className="deal">
-      <span className="deal__label">Asking price</span>
-      <span className="deal__price">
-        <Gold>{listing.price}</Gold>
-        <span className="deal__currency">gold</span>
-      </span>
+    <button
+      type="button"
+      className={`item__copy${copied ? " item__copy--did" : ""}`}
+      title={copied ? "copied" : "copy"}
+      aria-label={copied ? "copied" : "copy this card"}
+      onClick={copy}
+    >
+      {copied ? (
+        <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+          <path d="M3 8.5 6.5 12 13 4.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      ) : (
+        <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+          <rect x="5.5" y="5.5" width="8" height="8" rx="1" fill="none" stroke="currentColor" />
+          <path d="M10.5 3.5v-1a1 1 0 0 0-1-1h-6a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h1" fill="none" stroke="currentColor" />
+        </svg>
+      )}
+    </button>
+  );
+};
 
-      <span className="deal__seller">
-        {/* A name is a way in. Somebody deciding whether to spend on a weapon
-            wants to know who is selling it, and that question arrives in the
-            middle of another one — so it is answered without leaving. */}
-        {mine ? (
-          <em>your listing</em>
-        ) : (
-          <Link to={`/player/${encodeURIComponent(listing.seller_name)}`}>
-            {listing.seller_name}
-          </Link>
-        )}
-        {listed ? <span className="deal__when"> · {listed}</span> : null}
-      </span>
+/**
+ * The same weapon on one line, for the lists that are an aside rather than the
+ * page: your own stall, and what has sold. The full card is for choosing
+ * between things; here you already know which one it is — the mark at the
+ * left of the name is the whole of its picture.
+ */
+const Line = ({ listing }) => (
+  <>
+    <WeaponMark listing={listing} small />
+    <span className={`title title--${tierOf(listing.rarity)}`}>
+      {listing.name ?? `item ${listing.item_id}`}
+    </span>
+    {listing.power ? <span className="table__quiet"> · power {listing.power}</span> : null}
+  </>
+);
 
-      <div className="deal__acts">
-        {mine ? null : (
-          <Button disabled={!canBuy} onClick={onBuy}>
-            Buy
-          </Button>
-        )}
-        {/* The one thing a trade site is asked for outside itself: paste this
-            into a chat and ask whether it is worth the money. */}
-        <button className="link deal__copy" type="button" onClick={copy}>
-          {copied ? "copied" : "copy"}
-        </button>
-      </div>
-    </div>
+/**
+ * The right of the three: what it costs.
+ *
+ * Its own panel rather than things loose at the end of the row. Down a list of
+ * twenty, the price has to land in the same place every time or the column
+ * cannot be read at all. The doing of it — the Buy button — lives at the
+ * card's foot, in `stock__meta`, not here.
+ */
+const Deal = ({ listing }) => (
+  <div className="deal">
+    <span className="deal__label">Asking price</span>
+    <span className="deal__price">
+      <Gold>{listing.price}</Gold>
+      <span className="deal__currency">gold</span>
+    </span>
+  </div>
+);
+
+/**
+ * The one action, at the card's bottom-right corner.
+ *
+ * Gold leaving in one click is one click too easy — a slip on the button
+ * under the finger while scrolling spends real gold. So the press is a
+ * decision made twice: the first click arms, the same button answers
+ * "Confirm" in the danger's colour, and three seconds of silence disarms.
+ */
+const BuyButton = ({ canBuy, onBuy }) => {
+  const [arming, setArming] = useState(false);
+
+  const act = () => {
+    if (!arming) {
+      setArming(true);
+      setTimeout(() => setArming(false), 3000);
+      return;
+    }
+    setArming(false);
+    onBuy();
+  };
+
+  return (
+    <Button kind={arming ? "danger" : undefined} disabled={!canBuy} onClick={act}>
+      {arming ? "Confirm" : "Buy"}
+    </Button>
   );
 };
 
@@ -280,12 +165,27 @@ export const Market = () => {
   const [problem, setProblem] = useState("");
   const [said, setSaid] = useState("");
   const [busy, setBusy] = useState(0);
+  /*
+   * The page's two halves, chosen at the top right: browsing what everybody
+   * has put up, or putting one up yourself. Signed out there is only the one
+   * half, so the switch is not drawn at all.
+   */
+  const [mode, setMode] = useState("buy");
   const listings = market?.listings ?? null;
   const total = Number(market?.total ?? 0);
   const facets = market?.facets ?? EMPTY_FACETS;
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const browsing = !playing || mode === "buy";
 
-  const refresh = useCallback(async () => {
+  /*
+   * Two reads, not one. The board has to be read again whenever the filters
+   * move — that is what the filters are for — but the stall and the bag do
+   * not care about them, and fetching both on every keystroke asked the game
+   * server to answer the same question thirty times. The board is never
+   * cached on purpose: the server's answer is the one that is true, and a
+   * cached market is one that sells what somebody already bought.
+   */
+  const refreshMarket = useCallback(async () => {
     setLoadingMarket(true);
     try {
       const board = await api.market({
@@ -306,7 +206,9 @@ export const Market = () => {
     } finally {
       setLoadingMarket(false);
     }
+  }, [filters, page]);
 
+  const refreshStall = useCallback(async () => {
     if (!playing) {
       setStall(null);
       setBag(null);
@@ -321,13 +223,18 @@ export const Market = () => {
         failure instanceof ApiError ? failure.message : "Could not load your stall."
       );
     }
-  }, [filters, page, playing]);
+  }, [playing]);
 
   useEffect(() => {
     if (!ready) return;
-    const timer = setTimeout(() => refresh().catch(() => undefined), filters.q ? 250 : 0);
+    const timer = setTimeout(() => refreshMarket().catch(() => undefined), filters.q ? 250 : 0);
     return () => clearTimeout(timer);
-  }, [ready, refresh]);
+  }, [ready, refreshMarket]);
+
+  useEffect(() => {
+    if (!ready) return;
+    refreshStall();
+  }, [ready, refreshStall]);
 
   const changeFilter = (name, value) => {
     setFilters((current) => ({ ...current, [name]: value }));
@@ -352,11 +259,13 @@ export const Market = () => {
     try {
       await what();
       setSaid(said_);
-      await refresh();
+      await Promise.all([refreshMarket(), refreshStall()]);
       return true;
     } catch (failure) {
       setProblem(failure instanceof ApiError ? failure.message : "Something went wrong.");
-      if (failure instanceof ApiError && failure.status === 410) await refresh();
+      if (failure instanceof ApiError && failure.status === 410) {
+        await Promise.all([refreshMarket(), refreshStall()]);
+      }
       return false;
     } finally {
       setBusy((count) => count - 1);
@@ -374,12 +283,32 @@ export const Market = () => {
               ? "one match"
               : `${whole.format(total)} matches${loadingMarket ? " · refreshing" : ""}`}
         </span>
+        {playing ? (
+          <div className="mode">
+            <button
+              type="button"
+              className={`mode__opt${mode === "buy" ? " mode__opt--on" : ""}`}
+              aria-pressed={mode === "buy"}
+              onClick={() => setMode("buy")}
+            >
+              Buy
+            </button>
+            <button
+              type="button"
+              className={`mode__opt${mode === "sell" ? " mode__opt--on" : ""}`}
+              aria-pressed={mode === "sell"}
+              onClick={() => setMode("sell")}
+            >
+              Sell
+            </button>
+          </div>
+        ) : null}
       </div>
 
       <Notice kind="bad">{problem}</Notice>
       <Notice kind="good">{said}</Notice>
 
-      {playing ? (
+      {playing && mode === "sell" ? (
         <Stall
           stall={stall}
           bag={bag}
@@ -390,7 +319,9 @@ export const Market = () => {
           onCancel={(id) => doing(() => api.cancelListing(id), "Taken back down.")}
           onClaim={() => doing(() => api.claimProceeds(), "Collected.")}
         />
-      ) : (
+      ) : null}
+
+      {!playing ? (
         <Box title="Your Stall">
           <p className="wait">
             {ready && viewer
@@ -398,134 +329,159 @@ export const Market = () => {
               : "Sign in to buy and sell."}
           </p>
         </Box>
-      )}
+      ) : null}
 
-      <Box title="Find A Weapon">
-        <form className="market-filters" onSubmit={(event) => event.preventDefault()}>
-          <label className="market-filter market-filter--search">
-            <span>Search</span>
-            <input
-              className="field__input"
-              type="search"
-              value={filters.q}
-              placeholder="name, seller, attack or modifier"
-              maxLength={64}
-              onChange={(event) => changeFilter("q", event.target.value)}
-            />
-          </label>
-          <label className="market-filter">
-            <span>Weapon type</span>
-            <select value={filters.type} onChange={(event) => changeFilter("type", event.target.value)}>
-              <option value="">all types</option>
-              {facets.types.map((type) => (
-                <option key={type.value} value={type.value}>
-                  {type.name} ({type.count})
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="market-filter">
-            <span>Rarity</span>
-            <select value={filters.rarity} onChange={(event) => changeFilter("rarity", event.target.value)}>
-              <option value="">all rarities</option>
-              {facets.rarities.map((rarity) => (
-                <option key={rarity.value} value={rarity.value}>
-                  {rarity.name ?? tierOf(rarity.value)} ({rarity.count})
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="market-filter">
-            <span>Usable by</span>
-            <select value={filters.hero} onChange={(event) => changeFilter("hero", event.target.value)}>
-              <option value="">any hero</option>
-              {facets.heroes.map((hero) => (
-                <option key={hero.value} value={hero.value}>
-                  {hero.name} ({hero.count})
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="market-filter">
-            <span>Maximum price</span>
-            <input
-              className="field__input field__input--narrow"
-              type="number"
-              min="1"
-              max="2000000000"
-              step="1"
-              value={filters.maxPrice}
-              placeholder="any"
-              onChange={(event) => changeFilter("maxPrice", event.target.value)}
-            />
-          </label>
-          <label className="market-filter">
-            <span>Order</span>
-            <select value={filters.sort} onChange={(event) => changeFilter("sort", event.target.value)}>
-              <option value="newest">newest first</option>
-              <option value="price_asc">price: low to high</option>
-              <option value="price_desc">price: high to low</option>
-              <option value="power_desc">power: high to low</option>
-              <option value="level_asc">level: low to high</option>
-            </select>
-          </label>
-          {Object.entries(filters).some(([name, value]) => value && !(name === "sort" && value === "newest")) ? (
-            <button className="link market-filter__clear" type="button" onClick={clearFilters}>
-              clear filters
-            </button>
-          ) : null}
-        </form>
-      </Box>
+      {browsing ? (
+        <Box title="Find A Weapon">
+          <form className="market-filters" onSubmit={(event) => event.preventDefault()}>
+            <label className="market-filter market-filter--search">
+              <span>Search</span>
+              <input
+                className="field__input"
+                type="search"
+                value={filters.q}
+                placeholder="name, seller, attack or modifier"
+                maxLength={64}
+                onChange={(event) => changeFilter("q", event.target.value)}
+              />
+            </label>
+            <label className="market-filter">
+              <span>Weapon type</span>
+              <select value={filters.type} onChange={(event) => changeFilter("type", event.target.value)}>
+                <option value="">all types</option>
+                {facets.types.map((type) => (
+                  <option key={type.value} value={type.value}>
+                    {type.name} ({type.count})
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="market-filter">
+              <span>Rarity</span>
+              <select value={filters.rarity} onChange={(event) => changeFilter("rarity", event.target.value)}>
+                <option value="">all rarities</option>
+                {facets.rarities.map((rarity) => (
+                  <option key={rarity.value} value={rarity.value}>
+                    {rarity.name ?? tierOf(rarity.value)} ({rarity.count})
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="market-filter">
+              <span>Usable by</span>
+              <select value={filters.hero} onChange={(event) => changeFilter("hero", event.target.value)}>
+                <option value="">any hero</option>
+                {facets.heroes.map((hero) => (
+                  <option key={hero.value} value={hero.value}>
+                    {hero.name} ({hero.count})
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="market-filter">
+              <span>Maximum price</span>
+              <input
+                className="field__input field__input--narrow"
+                type="number"
+                min="1"
+                max="2000000000"
+                step="1"
+                value={filters.maxPrice}
+                placeholder="any"
+                onChange={(event) => changeFilter("maxPrice", event.target.value)}
+              />
+            </label>
+            <label className="market-filter">
+              <span>Order</span>
+              <select value={filters.sort} onChange={(event) => changeFilter("sort", event.target.value)}>
+                <option value="newest">newest first</option>
+                <option value="price_asc">price: low to high</option>
+                <option value="price_desc">price: high to low</option>
+                <option value="power_desc">power: high to low</option>
+                <option value="level_asc">level: low to high</option>
+              </select>
+            </label>
+            {Object.entries(filters).some(([name, value]) => value && !(name === "sort" && value === "newest")) ? (
+              <button className="link market-filter__clear" type="button" onClick={clearFilters}>
+                clear filters
+              </button>
+            ) : null}
+          </form>
+        </Box>
+      ) : null}
 
-      <Box title="For Sale" more={total ? `${whole.format(total)} found` : null} flush>
-        {market === null && !marketFailed ? (
-          <p className="table__empty">Loading…</p>
-        ) : marketFailed && market === null ? (
-          <p className="table__empty">The market is not answering.</p>
-        ) : !listings.length ? (
-          <p className="table__empty">
-            {Object.values(filters).some((value) => value && value !== "newest")
-              ? "No weapon matches these filters."
-              : "Nobody has anything up for sale."}
-          </p>
-        ) : (
-          <>
-            <ul className="stock">
-              {listings.map((listing) => {
-                const mine = listing.seller_id === viewer?.accountId;
-                return (
+      {browsing ? (
+        <Box title="For Sale" more={total ? `${whole.format(total)} found` : null} flush>
+          {market === null && !marketFailed ? (
+            <p className="table__empty">Loading…</p>
+          ) : marketFailed && market === null ? (
+            <p className="table__empty">The market is not answering.</p>
+          ) : !listings.length ? (
+            <p className="table__empty">
+              {Object.values(filters).some((value) => value && value !== "newest")
+                ? "No weapon matches these filters."
+                : "Nobody has anything up for sale."}
+            </p>
+          ) : (
+            <>
+              <ul className="stock">
+                {listings.map((listing) => {
+                  const mine = listing.seller_id === viewer?.accountId;
+                  return (
                   <li className="stock__row" key={listing.id}>
+                    <CopyMark listing={listing} />
                     <Sigil listing={listing} />
                     <Detail listing={listing} />
-                    <Deal
-                      listing={listing}
-                      mine={mine}
-                      canBuy={playing && busy === 0}
-                      onBuy={() => doing(() => api.buyListing(listing.id), "Bought.")}
-                    />
+                    {/* The price column, as one column: the card, the action,
+                        and the seller line share its height, so nothing hangs
+                        below the item text to pull the card taller. */}
+                    <div className="stock__side">
+                      <Deal listing={listing} />
+                      <div className="stock__buy">
+                        {mine ? null : (
+                          <BuyButton
+                            canBuy={playing && busy === 0}
+                            onBuy={() => doing(() => api.buyListing(listing.id), "Bought.")}
+                          />
+                        )}
+                      </div>
+                      <div className="stock__meta">
+                        {mine ? (
+                          <em>your listing</em>
+                        ) : (
+                          <Link to={`/player/${encodeURIComponent(listing.seller_name)}`}>
+                            {listing.seller_name}
+                          </Link>
+                        )}
+                        {since(listing.listed_at) ? (
+                          <span className="stock__when"> · {since(listing.listed_at)}</span>
+                        ) : null}
+                      </div>
+                    </div>
                   </li>
-                );
-              })}
-            </ul>
-            {pageCount > 1 ? (
-              <div className="market-pager">
-                <Button disabled={page === 0 || loadingMarket} onClick={() => setPage((value) => value - 1)}>
-                  Previous
-                </Button>
-                <span>
-                  Page {page + 1} of {pageCount}
-                </span>
-                <Button
-                  disabled={page + 1 >= pageCount || loadingMarket}
-                  onClick={() => setPage((value) => value + 1)}
-                >
-                  Next
-                </Button>
-              </div>
-            ) : null}
-          </>
-        )}
-      </Box>
+                  );
+                })}
+              </ul>
+              {pageCount > 1 ? (
+                <div className="market-pager">
+                  <Button disabled={page === 0 || loadingMarket} onClick={() => setPage((value) => value - 1)}>
+                    Previous
+                  </Button>
+                  <span>
+                    Page {page + 1} of {pageCount}
+                  </span>
+                  <Button
+                    disabled={page + 1 >= pageCount || loadingMarket}
+                    onClick={() => setPage((value) => value + 1)}
+                  >
+                    Next
+                  </Button>
+                </div>
+              ) : null}
+            </>
+          )}
+        </Box>
+      ) : null}
 
       <Box title="About The Market">
         <p style={{ marginTop: 0 }}>
@@ -544,14 +500,61 @@ export const Market = () => {
   );
 };
 
+/**
+ * One weapon in the bag, drawn the way an inventory draws one: a tile with the
+ * weapon's own icon on it, the frame wearing the rarity.
+ *
+ * Hovering (or tabbing to) the tile reads its stats in a tooltip; clicking
+ * chooses it for the listing, and the chosen weapon's full card is laid out
+ * under the grid. A select could do neither — it cannot show a picture at all,
+ * and a bag of thirty reads as one long sentence of names and powers.
+ */
+const Slot = ({ item, chosen, onChoose }) => {
+  const tier = tierOf(item.rarity);
+  return (
+    <div className="bag__slot">
+      <button
+        type="button"
+        className={`bag__tile bag__tile--${tier}${chosen ? " bag__tile--chosen" : ""}`}
+        aria-pressed={chosen}
+        onClick={() => onChoose(item.id)}
+      >
+        <WeaponMark listing={item} />
+        <span className={`bag__tile-name title title--${tier}`}>
+          {item.name ?? `item ${item.item_id}`}
+        </span>
+        {item.power ? (
+          <span className="bag__tile-power">{whole.format(item.power)} power</span>
+        ) : null}
+      </button>
+      <div className="bag__tip">
+        <Detail listing={item} />
+      </div>
+    </div>
+  );
+};
+
 /** Your own side of it: what is up, what sold, and the form to put one more up. */
 const Stall = ({ stall, bag, busy, onList, onCancel, onClaim }) => {
   const [itemId, setItemId] = useState("");
   const [price, setPrice] = useState("");
+  const [wanted, setWanted] = useState("");
+  const [bagPage, setBagPage] = useState(0);
 
   const offerable = bag?.items ?? [];
   const owed = Number(stall?.owed ?? 0);
   const selected = offerable.find((item) => Number(item.id) === Number(itemId));
+
+  /*
+   * The bag is searched and paged here rather than on the server: it is this
+   * account's own unequipped weapons, already read whole for the gold count,
+   * and asking the game server to re-read it on every keystroke buys nothing.
+   */
+  const needle = wanted.trim().toLowerCase();
+  const matches = needle ? offerable.filter((item) => wantedBy(item, needle)) : offerable;
+  const bagPages = Math.max(1, Math.ceil(matches.length / BAG_PAGE_SIZE));
+  const page = Math.min(bagPage, bagPages - 1);
+  const shown = matches.slice(page * BAG_PAGE_SIZE, (page + 1) * BAG_PAGE_SIZE);
 
   return (
     <>
@@ -575,7 +578,7 @@ const Stall = ({ stall, bag, busy, onList, onCancel, onClaim }) => {
         {stall?.listed?.length ? (
           <ul className="mini" style={{ marginTop: "0.5rem" }}>
             {stall.listed.map((listing) => (
-              <li key={listing.id}>
+              <li key={listing.id} className="mini__slot">
                 <span className="mini__nm">
                   <Line listing={listing} />
                 </span>
@@ -590,6 +593,12 @@ const Stall = ({ stall, bag, busy, onList, onCancel, onClaim }) => {
                 >
                   take down
                 </button>
+                {/* The row is the name and the price; the card is what the
+                    row is of. Hovering reads it, stacked above the rows under
+                    it rather than under the one it came from. */}
+                <div className="bag__tip">
+                  <Detail listing={listing} />
+                </div>
               </li>
             ))}
           </ul>
@@ -608,14 +617,23 @@ const Stall = ({ stall, bag, busy, onList, onCancel, onClaim }) => {
         ) : null}
       </Box>
 
-      <Box title="Put One Up">
+      <Box
+        title="Put One Up"
+        more={
+          bag
+            ? needle
+              ? `${whole.format(matches.length)} of ${whole.format(offerable.length)} in the bag`
+              : `${whole.format(offerable.length)} in the bag`
+            : null
+        }
+      >
         {!offerable.length ? (
           <p className="wait" style={{ margin: 0 }}>
             Nothing unequipped to sell. A weapon in a hand has to come off first.
           </p>
         ) : (
           <form
-            className="filters listing-form"
+            className="listing-form"
             onSubmit={async (event) => {
               event.preventDefault();
               if (await onList(Number(itemId), Number(price))) {
@@ -624,29 +642,52 @@ const Stall = ({ stall, bag, busy, onList, onCancel, onClaim }) => {
               }
             }}
           >
-            <span>
-              <label htmlFor="weapon">Weapon</label>
-              <select
-                id="weapon"
-                required
-                value={itemId}
-                onChange={(event) => setItemId(event.target.value)}
-              >
-                <option value="">choose one</option>
-                {offerable.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {[
-                      item.name ?? `item ${item.item_id}`,
-                      `power ${item.power ?? 0}`,
-                      `level ${item.requiredlevel ?? 1}`,
-                      ...(item.modifiers ?? []).map((modifier) => modifier.name),
-                      ...(item.legendary ? [`★ ${item.legendary.name}`] : []),
-                    ].join(" · ")}
-                  </option>
+            <div className="bag-head">
+              <input
+                className="field__input"
+                type="search"
+                value={wanted}
+                placeholder="search the bag — name, type, modifier"
+                maxLength={64}
+                onChange={(event) => {
+                  setWanted(event.target.value);
+                  setBagPage(0);
+                }}
+              />
+            </div>
+            {matches.length ? (
+              <div className="bag">
+                {shown.map((item) => (
+                  <Slot
+                    key={item.id}
+                    item={item}
+                    chosen={Number(item.id) === Number(itemId)}
+                    onChoose={setItemId}
+                  />
                 ))}
-              </select>
-            </span>
-            <span>
+              </div>
+            ) : (
+              <p className="table__empty" style={{ margin: 0 }}>
+                Nothing in the bag is called that.
+              </p>
+            )}
+            {bagPages > 1 ? (
+              <div className="market-pager bag-pager">
+                <Button disabled={page === 0} onClick={() => setBagPage((value) => Math.max(0, value - 1))}>
+                  Previous
+                </Button>
+                <span>
+                  Page {page + 1} of {bagPages}
+                </span>
+                <Button
+                  disabled={page + 1 >= bagPages}
+                  onClick={() => setBagPage((value) => Math.min(bagPages - 1, value + 1))}
+                >
+                  Next
+                </Button>
+              </div>
+            ) : null}
+            <div className="listing-form__row">
               <label htmlFor="price">Price</label>
               <input
                 id="price"
@@ -656,16 +697,15 @@ const Stall = ({ stall, bag, busy, onList, onCancel, onClaim }) => {
                 max="2000000000"
                 step="1"
                 required
+                disabled={!itemId}
                 value={price}
                 placeholder="gold"
                 onChange={(event) => setPrice(event.target.value)}
               />
-            </span>
-            <Buttons>
               <Button type="submit" disabled={busy || !itemId || !price}>
                 Put up
               </Button>
-            </Buttons>
+            </div>
             {selected ? (
               <div className="listing-form__preview">
                 <Detail listing={selected} />

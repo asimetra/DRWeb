@@ -9,6 +9,7 @@ import { Forgot } from "./pages/Forgot.jsx";
 import { Reset } from "./pages/Reset.jsx";
 import { Account } from "./pages/Account.jsx";
 import { Market } from "./pages/Market.jsx";
+import { Shop } from "./pages/Shop.jsx";
 import { Player } from "./pages/Player.jsx";
 
 export const App = () => (
@@ -24,6 +25,7 @@ export const App = () => (
         <Route path="/reset" element={<Reset />} />
         <Route path="/account" element={<Account />} />
         <Route path="/market" element={<Market />} />
+        <Route path="/shop" element={<Shop />} />
         <Route path="/player/:name" element={<Player />} />
         {/* Anything unknown lands on the front page rather than a login form. */}
         <Route path="*" element={<Navigate to="/" replace />} />

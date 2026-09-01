@@ -142,7 +142,10 @@ export const Player = () => {
   }
 
   return (
-    <Page where={player.name}>
+    /* "Player", not the name: the crest says where you are on the site, and
+       the board head below is where the name belongs — it was written twice
+       before, once at the very top of the page and once here. */
+    <Page where="Player">
       <div className="board-head">
         <h2>{player.name}</h2>
         {player.title ? (

@@ -47,6 +47,13 @@
   --outside: #0b0906;
   --outside-dark: #060504;
 
+  /*
+   * The one word that keeps the browser's own widgets honest: without it the
+   * dropdown lists open white, a piece of somebody else's theme pasted into
+   * the middle of this one.
+   */
+  color-scheme: dark;
+
   --frame: rgba(168, 143, 95, 0.20);
   --frame-dark: rgba(190, 160, 105, 0.32);
   --frame-lit: rgba(206, 177, 120, 0.16);
@@ -386,6 +393,20 @@ a:hover { color: var(--link-hot); }
   padding: 0.2rem 0.35rem;
 }
 
+/*
+ * The browser paints the open list itself, and `color-scheme: dark` only
+ * advises it. These two lines are the advice restated as a rule, for the
+ * engines that take styling on `option` and would otherwise open a white
+ * list in the middle of the dark.
+ */
+option,
+select option {
+  /* Warm, not black: the game's ground is brown-dark, and a neutral #000
+     list would read as a hole punched in the page. */
+  background-color: #17120b;
+  color: var(--text);
+}
+
 .pager {
   display: flex;
   gap: 0.3rem;
@@ -556,13 +577,73 @@ a:hover { color: var(--link-hot); }
 .stock__row {
   display: grid;
   grid-template-columns: 5.5rem minmax(0, 1fr) 13rem;
-  gap: 1rem;
+  /* Top-aligned, not centred: the price card starts on the icon's line, and
+     the item's text is what gives the card its height. */
   align-items: start;
-  padding: 0.85rem 0.9rem;
+  gap: 1rem;
+  padding: 0.7rem 0.9rem 0.5rem;
   border-bottom: 1px solid var(--rule);
 }
 .stock__row:last-child { border-bottom: 0; }
 .stock__row:nth-child(odd) { background: rgba(168, 143, 95, 0.04); }
+
+/*
+ * The price column, as one column: the card with the button glued under it,
+ * the pair centred on the row's middle — the same middle the icon centres
+ * on — and the seller line kept at the foot of the column.
+ */
+.stock__side {
+  grid-column: 3;
+  grid-row: 1;
+  align-self: stretch;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.stock__buy {
+  display: flex;
+  justify-content: center;
+  margin-top: 0.45rem;
+}
+.stock__buy .button {
+  border-radius: 0;
+  padding: 0.3rem 1.4rem;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--text-dim);
+  background: none;
+  border: 1px solid var(--frame);
+}
+.stock__buy .button:hover {
+  color: var(--text);
+  background: var(--page-lit);
+}
+.stock__buy .button--danger {
+  color: #f0c4b6;
+  background: linear-gradient(180deg, rgba(150, 55, 40, 0.5), rgba(110, 40, 30, 0.35));
+  border-color: rgba(196, 85, 42, 0.5);
+}
+
+/*
+ * Who is asking, and since when — pinned to the foot of the column, so the
+ * centred pair above never has to make room for it.
+ */
+.stock__meta {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  font-size: 0.76rem;
+  color: var(--text-dim);
+}
+.stock__when { color: var(--text-faint); font-size: 0.72rem; }
 
 /* ------------------------------------------------------------- the sigil - */
 
@@ -574,6 +655,7 @@ a:hover { color: var(--link-hot); }
 .sigil {
   display: grid;
   justify-items: center;
+  align-self: center;
   gap: 0.2rem;
   padding: 0.45rem 0.3rem;
   border: 1px solid var(--frame);
@@ -611,18 +693,23 @@ a:hover { color: var(--link-hot); }
 /* -------------------------------------------------------------- the deal - */
 
 /*
- * Its own panel rather than three things loose at the end of the row, and the
- * order is the order it is read in: what it costs, who is asking, what you can
- * do about it.
+ * Its own panel rather than things loose at the end of the row, and it holds
+ * one fact, so the fact is centred in it. The panel is a frame and nothing
+ * more — no wash of its own, so a page of twenty does not turn into twenty
+ * boxes.
  */
 .deal {
-  display: grid;
-  gap: 0.3rem;
-  align-content: start;
-  padding: 0.55rem 0.6rem;
-  border: 1px solid var(--frame);
-  border-radius: 4px;
-  background: linear-gradient(180deg, rgba(168, 143, 95, 0.09), rgba(0, 0, 0, 0.22));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  /* No bottom padding: the panel is invisible, so its padding would read as
+     air above the button and throw the button off centre between the price
+     and the seller line. The top padding matches the sigil's, so the card
+     and the icon start on one line. */
+  padding: 0.45rem 0.6rem 0;
+  background: none;
 }
 .deal__label {
   font-size: 0.62rem;
@@ -634,19 +721,6 @@ a:hover { color: var(--link-hot); }
 .deal__price { display: flex; align-items: baseline; gap: 0.3rem; }
 .deal__price .gold { font-size: 1.15rem; }
 .deal__currency { font-size: 0.68rem; color: var(--text-faint); }
-
-/* Under the price, because the name is what you check once you have stopped. */
-.deal__seller {
-  font-size: 0.76rem;
-  color: var(--text-dim);
-  border-top: 1px dotted var(--rule);
-  padding-top: 0.3rem;
-  overflow-wrap: anywhere;
-}
-.deal__when { color: var(--text-faint); font-size: 0.72rem; }
-
-.deal__acts { display: flex; align-items: center; gap: 0.55rem; margin-top: 0.15rem; }
-.deal__copy { font-size: 0.74rem; }
 
 /*
  * Six filters that flow rather than six columns that are declared.
@@ -701,15 +775,15 @@ a:hover { color: var(--link-hot); }
   /* 5.25rem, not less: "uncommon" is the widest tier word and it wants 68px
      with its padding. A narrower column clipped it. */
   .stock__row { grid-template-columns: 5.25rem minmax(0, 1fr); }
-  .deal {
+  .stock__side {
     grid-column: 1 / -1;
-    grid-template-columns: auto auto 1fr;
-    align-items: center;
-    gap: 0.3rem 0.7rem;
+    justify-content: center;
+  }
+  .deal {
+    flex-direction: row;
+    justify-content: center;
   }
   .deal__label { display: none; }
-  .deal__seller { border-top: 0; padding-top: 0; }
-  .deal__acts { justify-content: flex-end; }
 }
 
 @media (max-width: 34rem) {
@@ -722,6 +796,207 @@ a:hover { color: var(--link-hot); }
 @media (min-width: 34.01rem) {
   .market-filter--search { grid-column: span 2; }
 }
+
+/* ------------------------------------------------------------------ shop - */
+
+/*
+ * The shop borrows the market's row wholesale — same sigil, same item, same
+ * three columns — because it is the same weapon being read for the same
+ * reasons. What is different is only what replaces the deal panel, and the two
+ * things the market has no use for: which day this is, and how long it lasts.
+ */
+
+/*
+ * The days, as a rail of doors.
+ *
+ * It scrolls rather than wraps. Wrapped, a fortnight of days becomes two rows
+ * of unequal length and the eye loses which one is next; in a line they stay in
+ * the order they happen, which is the only order they have.
+ */
+.rail {
+  display: flex;
+  gap: 0.3rem;
+  overflow-x: auto;
+  padding: 0.6rem 0.9rem;
+  border-bottom: 1px solid var(--rule);
+  scrollbar-width: thin;
+}
+.rail__day {
+  flex: none;
+  font: inherit;
+  font-size: 0.74rem;
+  color: var(--text-dim);
+  background: var(--page-sunk);
+  border: 1px solid var(--frame);
+  border-radius: 3px;
+  padding: 0.28rem 0.6rem;
+  cursor: pointer;
+  white-space: nowrap;
+  text-transform: capitalize;
+}
+.rail__day:hover { color: var(--text); border-color: var(--frame-dark); }
+/* The day being read wears the frame's own lit edge — the same device the
+   legendary sigil uses, and for the same reason: it is the one in hand. */
+.rail__day--now {
+  color: var(--text-on-frame);
+  border-color: var(--frame-dark);
+  background: var(--page-lit);
+}
+/* Today is marked even when another day is open, so the rail never loses where
+   the reader actually is in it. */
+.rail__day--today:not(.rail__day--now) { color: var(--link); }
+/* And when the rail has moved so far that today is not on it at all, the way
+   back is the first thing on the left, where the days would otherwise start. */
+.rail__day--back { color: var(--link); border-style: dashed; }
+
+/*
+ * The rarity a run of the shelf belongs to, written across the row above it.
+ *
+ * A band rather than a heading with air around it: the shelf is one list and
+ * these are its divisions, so they sit in the list's own rhythm. The word wears
+ * the ladder muted, the way the rank numbers do — the sigils underneath are
+ * already carrying the colour at full voice.
+ */
+.shelf__band {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 0.4rem 0.9rem 0.25rem;
+  border-bottom: 1px solid var(--rule);
+  background: var(--page-sunk);
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.11em;
+  color: var(--text-faint);
+}
+.shelf__count { font-variant-numeric: tabular-nums; }
+.shelf__band--legendary { color: var(--tier-legendary); }
+.shelf__band--rare { color: var(--tier-rare); }
+.shelf__band--uncommon { color: var(--tier-uncommon); }
+.shelf__band--common { color: var(--tier-common); }
+/*
+ * And the shelf does not stripe. The market's alternating rows count from one
+ * and are even; here the bands are list items too, so every division shifts the
+ * count by one and the stripes come out in runs of two — which reads as a fault
+ * rather than as a rhythm. The bands divide the list well enough on their own.
+ */
+.stock--shelf .stock__row:nth-child(odd) { background: none; }
+
+/*
+ * What the game is asking. The market's panel next door carries a seller, a
+ * time and a button because all three are questions there; here the price is
+ * the whole of it, so the panel is the price and one quiet line under it.
+ */
+.asking {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  padding: 0.45rem 0.6rem 0;
+}
+.asking__label {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--text-faint);
+}
+.asking__price { display: flex; align-items: baseline; gap: 0.3rem; }
+.asking__price .gold { font-size: 1.15rem; }
+.asking__currency { font-size: 0.68rem; color: var(--text-faint); }
+.asking__back { font-size: 0.68rem; color: var(--text-faint); text-align: center; }
+
+/*
+ * What is coming: a line each, because the question is "when" and the answer is
+ * a date. The full card is for choosing between weapons that are in front of
+ * you; nothing on this list is buyable today, so it is an index rather than a
+ * shelf, and it is read down the left edge where the dates are.
+ */
+.comings { list-style: none; margin: 0; padding: 0; }
+.coming {
+  display: grid;
+  grid-template-columns: 6.5rem minmax(0, 1fr) 5rem 6rem 6rem;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.1rem;
+  border-bottom: 1px dotted var(--rule);
+  font-size: 0.78rem;
+}
+.coming:last-child { border-bottom: 0; }
+/* The date is the answer and it is also the way through to that day's shelf,
+   so it is the one thing on the line that is a control. */
+.coming__day {
+  justify-self: start;
+  font: inherit;
+  font-size: 0.76rem;
+  color: var(--link);
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  text-transform: capitalize;
+}
+.coming__day:hover { color: var(--link-hot); }
+.coming__what { display: flex; align-items: center; gap: 0.4rem; min-width: 0; }
+.coming__what .title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.coming__level,
+.coming__power {
+  color: var(--text-faint);
+  font-size: 0.72rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.coming__price { text-align: right; font-variant-numeric: tabular-nums; }
+
+/*
+ * Narrow, the index gives up its two quiet columns before anything else. The
+ * date, the weapon and the price are the line; level and power are what you
+ * read once you have found it, and there is a card for that.
+ */
+@media (max-width: 46rem) {
+  .coming { grid-template-columns: 5.5rem minmax(0, 1fr) 5.5rem; }
+  .coming__level,
+  .coming__power { display: none; }
+}
+
+/* The same width the deal panel gives up its column at, and for the same
+   reason: below it there are two columns, and the price takes the row under
+   them rather than being squeezed in beside the item's text. */
+@media (max-width: 52rem) {
+  .asking {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+  .asking__label { display: none; }
+}
+
+/*
+ * The copy mark, the listing card's bottom-left corner — the corner of the
+ * whole row, not a place inside the item's text where it would read as part
+ * of the card's content. It is there when wanted and invisible when not,
+ * which a word in the deal panel never managed.
+ */
+.stock__row { position: relative; }
+.item__copy {
+  position: absolute;
+  left: 0.45rem;
+  bottom: 0.45rem;
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-faint);
+  cursor: pointer;
+}
+.item__copy:hover { color: var(--text); }
+.item__copy--did { color: var(--gold); }
 
 .item__name { font-weight: 600; font-size: 0.95rem; }
 .item__type {
@@ -769,14 +1044,36 @@ a:hover { color: var(--link-hot); }
 /* And what was rolled onto it, last, because it is what varies. */
 .item__mods { border-top: 1px dotted var(--rule); padding-top: 0.5rem; }
 .item__mod {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.35rem;
   font-size: 0.76rem;
   line-height: 1.4;
   color: var(--r-uncommon);
 }
-.item__mod + .item__mod { margin-top: 0.2rem; }
+.item__mod + .item__mod { margin-top: 0.25rem; }
 /* Apart, as the game keeps it apart — see describeListings. */
 .item__mod--legendary { color: var(--r-legendary); }
-.item__mod--legendary::before { content: "★ "; opacity: 0.85; }
+.item__mod--legendary::before { content: "★"; opacity: 0.85; }
+/*
+ * The modifier's own icon, when the deployment has exported one.
+ *
+ * Sized in `em` so it is exactly the line box it sits beside: a picture next to
+ * a sentence has one right height and it is the sentence's. Aligned to the top
+ * rather than centred, because a description that wraps to two lines would
+ * otherwise float its icon into the gap between them.
+ *
+ * The star goes when there is a picture. It was there to mark the legendary
+ * line out from the two above it, and the icon now does that better — keeping
+ * both would say it twice in a row three words long.
+ */
+.item__mod-mark {
+  flex: none;
+  width: 1.45em;
+  height: 1.45em;
+  background: center / contain no-repeat;
+}
+.item__mod--art::before { content: none; }
 
 /** Two-column facts, with the caption-and-figure rhythm the rails use. */
 .facts { border-collapse: collapse; width: 100%; font-size: 0.83rem; }
@@ -871,11 +1168,131 @@ a:hover { color: var(--link-hot); }
   flex-wrap: wrap;
 }
 
+/*
+ * The switch that splits the page in two: what everybody is selling, or what
+ * you are selling. Two words joined edge to edge rather than a styled select —
+ * the choice is the page, not a field in a form.
+ */
+.mode {
+  display: inline-flex;
+  margin-left: auto;
+  border: 1px solid var(--frame);
+  border-radius: 4px;
+  background: var(--page-sunk);
+}
+.mode__opt {
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 0.3rem 0.95rem;
+  font: inherit;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+.mode__opt + .mode__opt { border-left: 1px solid var(--frame); }
+.mode__opt:hover { color: var(--text); }
+.mode__opt--on { background: var(--page-lit); color: var(--text); }
+
 /** A price is three or four digits, not a sentence. */
 .field__input--narrow { width: 7rem; }
+
+/*
+ * The bag as an inventory, not a select.
+ *
+ * A dropdown cannot show a picture and cannot hold thirty weapons without
+ * becoming one long sentence, so the bag is a grid of tiles instead — one
+ * weapon to a tile, the icon on it, the frame wearing the rarity, the choice
+ * made by clicking rather than by reading.
+ */
+.bag {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(7rem, 1fr));
+  gap: 0.5rem;
+}
+.bag__slot { position: relative; }
+.bag-head { margin-bottom: 0.6rem; }
+.bag-head .field__input { width: 100%; }
+/* The board's pager, without the rule — the grid already has its own edges. */
+.bag-pager { margin-top: 0.7rem; border-top: 0; padding: 0 0 0.15rem; }
+.bag__tile {
+  display: grid;
+  justify-items: center;
+  gap: 0.25rem;
+  width: 100%;
+  padding: 0.55rem 0.35rem 0.45rem;
+  border: 1px solid var(--frame);
+  border-radius: 4px;
+  background: var(--page-sunk);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+  text-align: center;
+}
+.bag__tile--legendary { border-color: var(--frame-lit); }
+.bag__tile:hover,
+.bag__tile:focus-visible {
+  border-color: var(--frame-dark);
+  background: var(--page-lit);
+}
+/* Chosen is a state, not a hover: it reads even after the pointer moves on. */
+.bag__tile--chosen {
+  border-color: var(--frame-dark);
+  background: var(--page-lit);
+  box-shadow: inset 0 0 0 1px var(--frame-dark);
+}
+.bag__tile-name {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.76rem;
+  line-height: 1.25;
+}
+.bag__tile-power {
+  font-size: 0.66rem;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * The stats, on hover. Below the tile rather than over it — the tooltip
+ * covering the tile it describes is the tooltip hiding the answer. No
+ * focus-within here: choosing the tile already lays the full card out under
+ * the grid, and a tooltip that stays after the click is just in the way.
+ */
+.bag__tip {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  left: 0;
+  z-index: 30;
+  width: min(21rem, 82vw);
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--frame-dark);
+  border-radius: 4px;
+  background: var(--page);
+  box-shadow: 0 0.4rem 1.2rem rgba(0, 0, 0, 0.55);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.bag__slot:hover .bag__tip,
+.mini__slot:hover .bag__tip { opacity: 1; visibility: visible; }
+
+.listing-form__row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 0.7rem;
+}
+.listing-form__row label { color: var(--text-dim); font-size: 0.8rem; }
+
 .listing-form__preview {
-  flex: 1 0 100%;
-  margin-top: 0.25rem;
+  margin-top: 0.7rem;
   padding: 0.65rem;
   border: 1px solid var(--rule);
   border-radius: 3px;
@@ -884,6 +1301,28 @@ a:hover { color: var(--link-hot); }
 .listing-form__preview .item { max-width: 36rem; }
 .listing-form__preview .footnote { margin: 0.6rem 0 0; }
 .mini--sold { border-top: 1px dotted var(--rule); padding-top: 0.35rem; }
+
+/*
+ * A stall row that answers a hover with its card. The row carries position so
+ * the card can anchor to it, and while it is hovered it stacks itself above
+ * every row after it — without that, the next row (later in the document, so
+ * painted later) would draw straight over the card it is sitting on.
+ */
+.mini__slot { position: relative; }
+.mini__slot:hover { z-index: 40; }
+
+/*
+ * The card alone cannot be lifted above the next panel: `backdrop-filter` on
+ * `.box` gives every box its own stacking context, so the card's z-index is
+ * trapped inside the box it lives in and the box below paints straight over
+ * it. So the box is lifted with the card — while a row or a bag tile is being
+ * read, the box it lives in stands above its neighbours.
+ */
+.box:has(.mini__slot:hover),
+.box:has(.bag__slot:hover) {
+  position: relative;
+  z-index: 50;
+}
 
 /* ----------------------------------------------------------------- misc - */
 
@@ -996,4 +1435,25 @@ a.name:hover { color: var(--link-hot); }
   height: 34px;
   background: center / contain no-repeat;
   image-rendering: pixelated;
+}
+
+/*
+ * The same mark at the scale a line of text carries: the stall's rows and the
+ * sold list. Declared after `--art` so the row size wins over the plate size
+ * when a mark is both, and fixed against the flex row so a long name squeezes
+ * itself rather than the picture.
+ */
+.sigil__mark--small {
+  /* inline-block, not inline: a width and a height mean nothing to an inline
+     element, and the row-sized mark sat inside one — the plate had no size,
+     so the picture had nowhere to land. */
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  flex: none;
+  align-self: center;
+  vertical-align: middle;
+  margin-right: 0.3rem;
+  font-size: 0.66rem;
+  line-height: 1;
 }

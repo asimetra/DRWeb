@@ -9,6 +9,14 @@
  * token and try the call once more.
  */
 
+/** Whatever was actually given, in the order it was written. */
+const query = (options) =>
+  new URLSearchParams(
+    Object.entries(options).filter(
+      ([, value]) => value !== undefined && value !== null && value !== ""
+    )
+  );
+
 export class ApiError extends Error {
   constructor(status, message) {
     super(message);
@@ -84,12 +92,8 @@ export const api = {
   character: () => call("GET", "/api/me/character"),
   status: () => call("GET", "/api/status"),
 
-  leaderboard: (metric, scope = {}) => {
-    const query = new URLSearchParams(
-      Object.entries(scope).filter(([, value]) => value !== undefined && value !== null)
-    );
-    return call("GET", `/api/leaderboards/${metric}?${query}`);
-  },
+  leaderboard: (metric, scope = {}) =>
+    call("GET", `/api/leaderboards/${metric}?${query(scope)}`),
   inventory: () => call("GET", "/api/inventory"),
 
   /*
@@ -98,17 +102,21 @@ export const api = {
    * a browser could choose would be a way to sell somebody else's weapons.
    */
   profile: (name) => call("GET", `/api/players/${encodeURIComponent(name)}`),
-  market: (options = {}) => {
-    const query = new URLSearchParams(
-      Object.entries(options).filter(([, value]) => value !== undefined && value !== null && value !== "")
-    );
-    return call("GET", `/api/market?${query}`);
-  },
+  market: (options = {}) => call("GET", `/api/market?${query(options)}`),
   stall: () => call("GET", "/api/market/stall"),
   listForSale: (itemId, price) => call("POST", "/api/market", { itemId, price }),
   buyListing: (id) => call("POST", `/api/market/${Number(id)}/buy`),
   cancelListing: (id) => call("POST", `/api/market/${Number(id)}/cancel`),
   claimProceeds: () => call("POST", "/api/market/claim"),
+
+  /*
+   * The shop, which is the market's opposite: it takes no account and acts on
+   * nothing. What the game is selling today and what it will be selling in
+   * November, read out of the game's own tables — so unlike everything above
+   * it, a signed-out browser gets the same answer as anybody else.
+   */
+  shop: (options = {}) => call("GET", `/api/shop?${query(options)}`),
+  shopSchedule: (options = {}) => call("GET", `/api/shop/schedule?${query(options)}`),
 
   revokeGameTokens: () => call("DELETE", "/api/game-token"),
 };
