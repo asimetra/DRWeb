@@ -507,6 +507,7 @@ a:hover { color: var(--link-hot); }
   text-transform: uppercase;
   letter-spacing: 0.06em;
   font-weight: 600;
+  color: var(--text-dim);
 }
 /* The ladder again, on the frame this time. */
 .sigil--uncommon { border-color: color-mix(in srgb, var(--r-uncommon) 55%, transparent); }

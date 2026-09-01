@@ -154,7 +154,11 @@ const Sigil = ({ listing }) => {
         {(type || "?").slice(0, 2).toUpperCase()}
       </span>
       <span className="sigil__type">{type || "weapon"}</span>
-      <span className={`sigil__tier title--${tier}`}>{tier}</span>
+      {/* Not `title--${tier}`. A saturated word in a small box reads as an
+          indicator lamp rather than a rarity — the frame around it already
+          carries the colour, and the ladder's saturation is spent on titles
+          and item names, which is where it means something. */}
+      <span className="sigil__tier">{tier}</span>
     </div>
   );
 };
