@@ -454,33 +454,179 @@ a:hover { color: var(--link-hot); }
  * that the market — the thing the page is for — had been given the least room
  * on it. So the item is laid out in the open and the table is gone.
  */
+/*
+ * A listing is three things side by side, which is how every trade site that
+ * works lays one out: what it is at a glance, what it is in full, and what it
+ * costs. Fixed widths on the outer two and the middle taking the rest, so that
+ * down a page of twenty the price is always in the same place — a column you
+ * can run your eye down is the whole reason for the shape.
+ */
 .stock { list-style: none; margin: 0; padding: 0; }
 .stock__row {
-  display: flex;
+  display: grid;
+  grid-template-columns: 5.5rem minmax(0, 1fr) 13rem;
   gap: 1rem;
-  align-items: flex-start;
-  justify-content: space-between;
+  align-items: start;
   padding: 0.85rem 0.9rem;
   border-bottom: 1px solid var(--rule);
 }
 .stock__row:last-child { border-bottom: 0; }
 .stock__row:nth-child(odd) { background: var(--page-alt); }
 
-/* Price, seller and the button, kept together at the end of the row so the
-   eye finds every one of them in the same place down the list. */
-.stock__deal {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.35rem;
-  flex: 0 0 auto;
-  text-align: right;
+/* ------------------------------------------------------------- the sigil - */
+
+/*
+ * Where the picture would be. There is no weapon art extracted, so this says
+ * the two things the picture would have said anyway — kind, and rarity — and
+ * the frame carries the colour.
+ */
+.sigil {
+  display: grid;
+  justify-items: center;
+  gap: 0.2rem;
+  padding: 0.45rem 0.3rem;
+  border: 1px solid var(--frame);
+  background: var(--page-sunk);
+  text-align: center;
 }
-.stock__seller { font-size: 0.74rem; color: var(--text-faint); }
+.sigil__mark {
+  font-family: var(--display);
+  font-size: 1.35rem;
+  line-height: 1.1;
+  color: var(--text-on-frame);
+}
+.sigil__type {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+  line-height: 1.2;
+}
+.sigil__tier {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+}
+/* The ladder again, on the frame this time. */
+.sigil--uncommon { border-color: color-mix(in srgb, var(--r-uncommon) 55%, transparent); }
+.sigil--rare { border-color: color-mix(in srgb, var(--r-rare) 45%, transparent); }
+.sigil--legendary {
+  border-color: color-mix(in srgb, var(--r-legendary) 60%, transparent);
+  box-shadow: 0 0 10px -2px var(--r-legendary-glow);
+}
+
+/* -------------------------------------------------------------- the deal - */
+
+/*
+ * Its own panel rather than three things loose at the end of the row, and the
+ * order is the order it is read in: what it costs, who is asking, what you can
+ * do about it.
+ */
+.deal {
+  display: grid;
+  gap: 0.3rem;
+  align-content: start;
+  padding: 0.55rem 0.6rem;
+  border: 1px solid var(--frame);
+  background: linear-gradient(180deg, rgba(168, 143, 95, 0.09), rgba(0, 0, 0, 0.22));
+}
+.deal__label {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--text-faint);
+}
+/* The number is what the eye is scanning for, so it is the largest thing here. */
+.deal__price { display: flex; align-items: baseline; gap: 0.3rem; }
+.deal__price .gold { font-size: 1.15rem; }
+.deal__currency { font-size: 0.68rem; color: var(--text-faint); }
+
+/* Under the price, because the name is what you check once you have stopped. */
+.deal__seller {
+  font-size: 0.76rem;
+  color: var(--text-dim);
+  border-top: 1px dotted var(--rule);
+  padding-top: 0.3rem;
+  overflow-wrap: anywhere;
+}
+.deal__when { color: var(--text-faint); font-size: 0.72rem; }
+
+.deal__acts { display: flex; align-items: center; gap: 0.55rem; margin-top: 0.15rem; }
+.deal__copy { font-size: 0.74rem; }
+
+/*
+ * Six filters that flow rather than six columns that are declared.
+ *
+ * The fixed template asked for 14rem plus five of 8rem — 54rem of grid inside a
+ * middle column that is 46rem wide, so it overflowed its panel by 186px at
+ * every desktop width and no breakpoint fixed it because none of them applied
+ * above 75rem. `auto-fit` fits as many as the space holds and is one rule
+ * instead of three that have to agree.
+ */
+.market-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 0.65rem;
+  align-items: end;
+}
+.market-filter { display: grid; gap: 0.2rem; min-width: 0; }
+.market-filter > span {
+  color: var(--text-dim);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.market-filter select {
+  width: 100%;
+  min-height: 2rem;
+  font: inherit;
+  font-size: 0.8rem;
+  color: var(--text);
+  background: var(--page-lit);
+  border: 1px solid var(--frame);
+  padding: 0.3rem 0.4rem;
+}
+.market-filter--search .field__input { width: 100%; }
+.market-filter__clear { justify-self: start; align-self: center; }
+
+.market-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 0.65rem;
+  border-top: 1px solid var(--rule);
+  color: var(--text-dim);
+  font-size: 0.76rem;
+}
+
+/* Narrow enough and the deal cannot hold a column of its own: the sigil keeps
+   its place beside the item and the price runs across the bottom instead. */
+@media (max-width: 52rem) {
+  /* 5.25rem, not less: "uncommon" is the widest tier word and it wants 68px
+     with its padding. A narrower column clipped it. */
+  .stock__row { grid-template-columns: 5.25rem minmax(0, 1fr); }
+  .deal {
+    grid-column: 1 / -1;
+    grid-template-columns: auto auto 1fr;
+    align-items: center;
+    gap: 0.3rem 0.7rem;
+  }
+  .deal__label { display: none; }
+  .deal__seller { border-top: 0; padding-top: 0; }
+  .deal__acts { justify-content: flex-end; }
+}
 
 @media (max-width: 34rem) {
-  .stock__row { flex-direction: column; }
-  .stock__deal { flex-direction: row; align-items: center; align-self: stretch; justify-content: space-between; }
+  .stock__row { grid-template-columns: minmax(0, 1fr); }
+  .sigil { justify-self: start; min-width: 5rem; }
+}
+
+/* Wide enough to be worth two, and never in a single-column grid where a span
+   of two would invent a second column to overflow into. */
+@media (min-width: 34.01rem) {
+  .market-filter--search { grid-column: span 2; }
 }
 
 .item__name { font-weight: 600; font-size: 0.95rem; }
@@ -490,6 +636,7 @@ a:hover { color: var(--link-hot); }
   text-transform: capitalize;
   margin-bottom: 0.5rem;
 }
+.item__fits { color: var(--text-dim); font-size: 0.72rem; margin: -0.35rem 0 0.5rem; }
 
 /*
  * Stat, then value, one to a line. A weapon is compared against another
@@ -621,6 +768,16 @@ a:hover { color: var(--link-hot); }
 
 /** A price is three or four digits, not a sentence. */
 .field__input--narrow { width: 7rem; }
+.listing-form__preview {
+  flex: 1 0 100%;
+  margin-top: 0.25rem;
+  padding: 0.65rem;
+  border: 1px solid var(--rule);
+  background: var(--page-alt);
+}
+.listing-form__preview .item { max-width: 36rem; }
+.listing-form__preview .footnote { margin: 0.6rem 0 0; }
+.mini--sold { border-top: 1px dotted var(--rule); padding-top: 0.35rem; }
 
 /* ----------------------------------------------------------------- misc - */
 

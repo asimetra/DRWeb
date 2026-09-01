@@ -242,6 +242,13 @@ fix — a full bag, a weapon still equipped, being in a dungeon.
 `GET /api/market` is readable signed out. A market nobody can look at before
 joining is a market nobody joins for.
 
+Market reads are server-side searchable and paged. Supported query parameters:
+`q`, `type`, `rarity`, `hero`, `maxPrice`, `sort`, `limit` and `offset`.
+Search covers weapon/seller names, attacks, modifiers and compatible heroes;
+the response also carries filter facets and the total match count. Listing
+payloads include the rarity name, shop value and which heroes can equip the
+weapon, so the browser does not need a second copy of GameMaster data.
+
 ## Tests
 
 ```bash

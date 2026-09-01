@@ -62,8 +62,17 @@ export const marketRoutes = async (app) => {
    * before joining is a market nobody joins for.
    */
   app.get("/api/market", async (request) => {
-    const limit = Number(request.query?.limit) || 50;
-    return app.game.readMarket(limit);
+    const query = request.query ?? {};
+    return app.game.readMarket({
+      q: String(query.q ?? "").trim().slice(0, 64),
+      type: String(query.type ?? "").trim().slice(0, 64),
+      rarity: Math.max(0, Math.min(4, Number(query.rarity) || 0)),
+      hero: Math.max(0, Number(query.hero) || 0),
+      maxPrice: Math.max(0, Number(query.maxPrice) || 0),
+      sort: String(query.sort ?? "newest").slice(0, 24),
+      limit: Math.max(1, Math.min(100, Number(query.limit) || 12)),
+      offset: Math.max(0, Math.min(1_000_000, Number(query.offset) || 0)),
+    });
   });
 
   /** This person's own: what is still up, and what is waiting to be collected. */

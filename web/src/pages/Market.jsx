@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api, ApiError } from "../api.js";
 import { Box, Button, Buttons, Notice, Page } from "../components/Chrome.jsx";
 import { useViewer } from "../viewer.jsx";
+import { asText, since, tierOf, typeOf } from "../market-view.js";
 
 const whole = new Intl.NumberFormat("en-GB");
 
@@ -9,14 +10,8 @@ const whole = new Intl.NumberFormat("en-GB");
  * Rarity is the one saturated thing on the site, and it means the same here as
  * it does on a board: the ladder the game's own Rarity table authors.
  */
-const TIERS = ["common", "uncommon", "rare", "legendary"];
-const tierOf = (rarity) => TIERS[Math.max(0, Math.min(3, Number(rarity ?? 0)))] ?? "common";
-
-const typeOf = (mastertype) =>
-  String(mastertype ?? "")
-    .replace(/_TYPE$/, "")
-    .replace(/_/g, " ")
-    .toLowerCase();
+const PAGE_SIZE = 12;
+const EMPTY_FACETS = { types: [], rarities: [], heroes: [] };
 
 /**
  * The whole item, read downwards: what it is, what it is worth swinging, and
@@ -45,6 +40,11 @@ const Detail = ({ listing }) => {
           {weapon?.classType ? ` · ${weapon.classType.toLowerCase()}` : ""}
         </div>
       ) : null}
+      {listing.usable_by?.length ? (
+        <div className="item__fits">
+          For {listing.usable_by.map((hero) => hero.name).join(", ")}
+        </div>
+      ) : null}
 
       <dl className="item__stats">
         {listing.power ? (
@@ -63,6 +63,12 @@ const Detail = ({ listing }) => {
           <>
             <dt>Level</dt>
             <dd>{listing.requiredlevel}</dd>
+          </>
+        ) : null}
+        {listing.vendor_value ? (
+          <>
+            <dt>Shop value</dt>
+            <dd>{whole.format(listing.vendor_value)}</dd>
           </>
         ) : null}
       </dl>
@@ -128,6 +134,84 @@ const Gold = ({ children }) => (
 );
 
 /**
+ * The left of the three, where a trade site puts the item's picture.
+ *
+ * There is no picture. The client's weapon art lives in SWFs that nothing has
+ * extracted, so an <img> here would be a broken one on every row — and a frame
+ * with nothing in it is worse than no frame. What it holds instead is the two
+ * things the picture would have told you at a glance anyway: what kind of
+ * weapon it is, and how rare. The frame wears the rarity, which is the same
+ * ladder the rank colours and the title tiers use.
+ *
+ * If the art is ever extracted this is the one component that changes.
+ */
+const Sigil = ({ listing }) => {
+  const tier = tierOf(listing.rarity);
+  const type = typeOf(listing.mastertype);
+  return (
+    <div className={`sigil sigil--${tier}`}>
+      <span className="sigil__mark" aria-hidden="true">
+        {(type || "?").slice(0, 2).toUpperCase()}
+      </span>
+      <span className="sigil__type">{type || "weapon"}</span>
+      <span className={`sigil__tier title--${tier}`}>{tier}</span>
+    </div>
+  );
+};
+
+/**
+ * The right of the three: what it costs, who is asking, and what you can do.
+ *
+ * Its own panel rather than three things loose at the end of the row. Down a
+ * list of twenty, the price has to land in the same place every time or the
+ * column cannot be read at all — and the seller belongs under the price rather
+ * than above it, because the number is what the eye is scanning for and the
+ * name is what it checks once it has stopped.
+ */
+const Deal = ({ listing, mine, canBuy, onBuy }) => {
+  const [copied, setCopied] = useState(false);
+  const listed = since(listing.listed_at);
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(asText(listing));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // A browser that refuses the clipboard is not worth an error message.
+    }
+  };
+
+  return (
+    <div className="deal">
+      <span className="deal__label">Asking price</span>
+      <span className="deal__price">
+        <Gold>{listing.price}</Gold>
+        <span className="deal__currency">gold</span>
+      </span>
+
+      <span className="deal__seller">
+        {mine ? <em>your listing</em> : listing.seller_name}
+        {listed ? <span className="deal__when"> · {listed}</span> : null}
+      </span>
+
+      <div className="deal__acts">
+        {mine ? null : (
+          <Button disabled={!canBuy} onClick={onBuy}>
+            Buy
+          </Button>
+        )}
+        {/* The one thing a trade site is asked for outside itself: paste this
+            into a chat and ask whether it is worth the money. */}
+        <button className="link deal__copy" type="button" onClick={copy}>
+          {copied ? "copied" : "copy"}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+/**
  * The market: everything up, and your own stall beside it.
  *
  * A listing is not a conversation. Nobody has to be online at the same time as
@@ -139,25 +223,81 @@ export const Market = () => {
   const { viewer, ready } = useViewer();
   const playing = Boolean(ready && viewer?.accountId);
 
-  const [listings, setListings] = useState(null);
+  const [market, setMarket] = useState(null);
   const [stall, setStall] = useState(null);
   const [bag, setBag] = useState(null);
+  const [filters, setFilters] = useState({
+    q: "",
+    type: "",
+    rarity: "",
+    hero: "",
+    maxPrice: "",
+    sort: "newest",
+  });
+  const [page, setPage] = useState(0);
+  const [loadingMarket, setLoadingMarket] = useState(false);
+  const [marketFailed, setMarketFailed] = useState(false);
   const [problem, setProblem] = useState("");
   const [said, setSaid] = useState("");
   const [busy, setBusy] = useState(0);
+  const listings = market?.listings ?? null;
+  const total = Number(market?.total ?? 0);
+  const facets = market?.facets ?? EMPTY_FACETS;
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   const refresh = useCallback(async () => {
-    const board = await api.market().catch(() => ({ listings: [] }));
-    setListings(board.listings ?? []);
-    if (!playing) return;
-    setStall(await api.stall().catch(() => null));
-    setBag(await api.inventory().catch(() => null));
-  }, [playing]);
+    setLoadingMarket(true);
+    try {
+      const board = await api.market({
+        ...filters,
+        limit: PAGE_SIZE,
+        offset: page * PAGE_SIZE,
+      });
+      setMarket(board);
+      setMarketFailed(false);
+
+      if (page > 0 && !(board.listings ?? []).length && Number(board.total) > 0) {
+        setPage(Math.max(0, Math.ceil(Number(board.total) / PAGE_SIZE) - 1));
+      }
+    } catch (failure) {
+      setMarketFailed(true);
+      setProblem(failure instanceof ApiError ? failure.message : "Could not load the market.");
+      throw failure;
+    } finally {
+      setLoadingMarket(false);
+    }
+
+    if (!playing) {
+      setStall(null);
+      setBag(null);
+      return;
+    }
+    try {
+      const [nextStall, nextBag] = await Promise.all([api.stall(), api.inventory()]);
+      setStall(nextStall);
+      setBag(nextBag);
+    } catch (failure) {
+      setProblem(
+        failure instanceof ApiError ? failure.message : "Could not load your stall."
+      );
+    }
+  }, [filters, page, playing]);
 
   useEffect(() => {
     if (!ready) return;
-    refresh();
+    const timer = setTimeout(() => refresh().catch(() => undefined), filters.q ? 250 : 0);
+    return () => clearTimeout(timer);
   }, [ready, refresh]);
+
+  const changeFilter = (name, value) => {
+    setFilters((current) => ({ ...current, [name]: value }));
+    setPage(0);
+  };
+
+  const clearFilters = () => {
+    setFilters({ q: "", type: "", rarity: "", hero: "", maxPrice: "", sort: "newest" });
+    setPage(0);
+  };
 
   /*
    * Every action is the same shape: try it, say what happened, and read the
@@ -173,9 +313,11 @@ export const Market = () => {
       await what();
       setSaid(said_);
       await refresh();
+      return true;
     } catch (failure) {
       setProblem(failure instanceof ApiError ? failure.message : "Something went wrong.");
       if (failure instanceof ApiError && failure.status === 410) await refresh();
+      return false;
     } finally {
       setBusy((count) => count - 1);
     }
@@ -186,11 +328,11 @@ export const Market = () => {
       <div className="board-head">
         <h2>Market</h2>
         <span className="board-head__where">
-          {listings === null
+          {market === null
             ? "…"
-            : listings.length === 1
-              ? "one weapon up"
-              : `${whole.format(listings.length)} weapons up`}
+            : total === 1
+              ? "one match"
+              : `${whole.format(total)} matches${loadingMarket ? " · refreshing" : ""}`}
         </span>
       </div>
 
@@ -218,36 +360,130 @@ export const Market = () => {
         </Box>
       )}
 
-      <Box title="For Sale" more={listings?.length ? `${listings.length} up` : null} flush>
-        {listings === null ? (
+      <Box title="Find A Weapon">
+        <form className="market-filters" onSubmit={(event) => event.preventDefault()}>
+          <label className="market-filter market-filter--search">
+            <span>Search</span>
+            <input
+              className="field__input"
+              type="search"
+              value={filters.q}
+              placeholder="name, seller, attack or modifier"
+              maxLength={64}
+              onChange={(event) => changeFilter("q", event.target.value)}
+            />
+          </label>
+          <label className="market-filter">
+            <span>Weapon type</span>
+            <select value={filters.type} onChange={(event) => changeFilter("type", event.target.value)}>
+              <option value="">all types</option>
+              {facets.types.map((type) => (
+                <option key={type.value} value={type.value}>
+                  {type.name} ({type.count})
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="market-filter">
+            <span>Rarity</span>
+            <select value={filters.rarity} onChange={(event) => changeFilter("rarity", event.target.value)}>
+              <option value="">all rarities</option>
+              {facets.rarities.map((rarity) => (
+                <option key={rarity.value} value={rarity.value}>
+                  {rarity.name ?? tierOf(rarity.value)} ({rarity.count})
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="market-filter">
+            <span>Usable by</span>
+            <select value={filters.hero} onChange={(event) => changeFilter("hero", event.target.value)}>
+              <option value="">any hero</option>
+              {facets.heroes.map((hero) => (
+                <option key={hero.value} value={hero.value}>
+                  {hero.name} ({hero.count})
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="market-filter">
+            <span>Maximum price</span>
+            <input
+              className="field__input field__input--narrow"
+              type="number"
+              min="1"
+              max="2000000000"
+              step="1"
+              value={filters.maxPrice}
+              placeholder="any"
+              onChange={(event) => changeFilter("maxPrice", event.target.value)}
+            />
+          </label>
+          <label className="market-filter">
+            <span>Order</span>
+            <select value={filters.sort} onChange={(event) => changeFilter("sort", event.target.value)}>
+              <option value="newest">newest first</option>
+              <option value="price_asc">price: low to high</option>
+              <option value="price_desc">price: high to low</option>
+              <option value="power_desc">power: high to low</option>
+              <option value="level_asc">level: low to high</option>
+            </select>
+          </label>
+          {Object.entries(filters).some(([name, value]) => value && !(name === "sort" && value === "newest")) ? (
+            <button className="link market-filter__clear" type="button" onClick={clearFilters}>
+              clear filters
+            </button>
+          ) : null}
+        </form>
+      </Box>
+
+      <Box title="For Sale" more={total ? `${whole.format(total)} found` : null} flush>
+        {market === null && !marketFailed ? (
           <p className="table__empty">Loading…</p>
+        ) : marketFailed && market === null ? (
+          <p className="table__empty">The market is not answering.</p>
         ) : !listings.length ? (
-          <p className="table__empty">Nobody has anything up for sale.</p>
+          <p className="table__empty">
+            {Object.values(filters).some((value) => value && value !== "newest")
+              ? "No weapon matches these filters."
+              : "Nobody has anything up for sale."}
+          </p>
         ) : (
-          <ul className="stock">
-            {listings.map((listing) => {
-              const mine = listing.seller_id === viewer?.accountId;
-              return (
-                <li className="stock__row" key={listing.id}>
-                  <Detail listing={listing} />
-                  <div className="stock__deal">
-                    <Gold>{listing.price}</Gold>
-                    <span className="stock__seller">
-                      {mine ? <em>you</em> : listing.seller_name}
-                    </span>
-                    {mine ? null : (
-                      <Button
-                        disabled={!playing || busy > 0}
-                        onClick={() => doing(() => api.buyListing(listing.id), "Bought.")}
-                      >
-                        Buy
-                      </Button>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
+          <>
+            <ul className="stock">
+              {listings.map((listing) => {
+                const mine = listing.seller_id === viewer?.accountId;
+                return (
+                  <li className="stock__row" key={listing.id}>
+                    <Sigil listing={listing} />
+                    <Detail listing={listing} />
+                    <Deal
+                      listing={listing}
+                      mine={mine}
+                      canBuy={playing && busy === 0}
+                      onBuy={() => doing(() => api.buyListing(listing.id), "Bought.")}
+                    />
+                  </li>
+                );
+              })}
+            </ul>
+            {pageCount > 1 ? (
+              <div className="market-pager">
+                <Button disabled={page === 0 || loadingMarket} onClick={() => setPage((value) => value - 1)}>
+                  Previous
+                </Button>
+                <span>
+                  Page {page + 1} of {pageCount}
+                </span>
+                <Button
+                  disabled={page + 1 >= pageCount || loadingMarket}
+                  onClick={() => setPage((value) => value + 1)}
+                >
+                  Next
+                </Button>
+              </div>
+            ) : null}
+          </>
         )}
       </Box>
 
@@ -275,6 +511,7 @@ const Stall = ({ stall, bag, busy, onList, onCancel, onClaim }) => {
 
   const offerable = bag?.items ?? [];
   const owed = Number(stall?.owed ?? 0);
+  const selected = offerable.find((item) => Number(item.id) === Number(itemId));
 
   return (
     <>
@@ -317,6 +554,18 @@ const Stall = ({ stall, bag, busy, onList, onCancel, onClaim }) => {
             ))}
           </ul>
         ) : null}
+
+        {stall?.sold?.length ? (
+          <ul className="mini mini--sold" style={{ marginTop: "0.5rem" }}>
+            {stall.sold.map((listing) => (
+              <li key={listing.id}>
+                <span className="mini__nm"><Line listing={listing} /></span>
+                <span className="mini__vl"><Gold>{listing.price}</Gold></span>
+                <span className="table__quiet">sold</span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
       </Box>
 
       <Box title="Put One Up">
@@ -326,12 +575,13 @@ const Stall = ({ stall, bag, busy, onList, onCancel, onClaim }) => {
           </p>
         ) : (
           <form
-            className="filters"
-            onSubmit={(event) => {
+            className="filters listing-form"
+            onSubmit={async (event) => {
               event.preventDefault();
-              onList(Number(itemId), Number(price));
-              setItemId("");
-              setPrice("");
+              if (await onList(Number(itemId), Number(price))) {
+                setItemId("");
+                setPrice("");
+              }
             }}
           >
             <span>
@@ -363,6 +613,7 @@ const Stall = ({ stall, bag, busy, onList, onCancel, onClaim }) => {
                 className="field__input field__input--narrow"
                 type="number"
                 min="1"
+                max="2000000000"
                 step="1"
                 required
                 value={price}
@@ -375,6 +626,16 @@ const Stall = ({ stall, bag, busy, onList, onCancel, onClaim }) => {
                 Put up
               </Button>
             </Buttons>
+            {selected ? (
+              <div className="listing-form__preview">
+                <Detail listing={selected} />
+                {selected.vendor_value ? (
+                  <p className="footnote">
+                    The game shop would pay <Gold>{selected.vendor_value}</Gold>; your market price is your choice.
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
           </form>
         )}
       </Box>

@@ -97,7 +97,12 @@ export const api = {
    * from the session — nothing here sends an account id, because an account id
    * a browser could choose would be a way to sell somebody else's weapons.
    */
-  market: (limit = 50) => call("GET", `/api/market?limit=${Number(limit)}`),
+  market: (options = {}) => {
+    const query = new URLSearchParams(
+      Object.entries(options).filter(([, value]) => value !== undefined && value !== null && value !== "")
+    );
+    return call("GET", `/api/market?${query}`);
+  },
   stall: () => call("GET", "/api/market/stall"),
   listForSale: (itemId, price) => call("POST", "/api/market", { itemId, price }),
   buyListing: (id) => call("POST", `/api/market/${Number(id)}/buy`),

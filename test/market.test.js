@@ -77,9 +77,16 @@ const fakeGame = {
     return { accountId, generation: 1 };
   },
 
-  async readMarket(limit) {
-    fakeGame.calls.push(["readMarket", limit]);
-    return { listings: [{ id: 501, seller_id: 9, price: 400, name: "Long Sword" }] };
+  async readMarket(options) {
+    fakeGame.calls.push(["readMarket", options]);
+    return {
+      listings: [{ id: 501, seller_id: 9, price: 400, name: "Long Sword" }],
+      total: 1,
+      offset: options.offset,
+      limit: options.limit,
+      has_more: false,
+      facets: { types: [], rarities: [], heroes: [] },
+    };
   },
   async readStall(accountId) {
     fakeGame.calls.push(["readStall", accountId]);
@@ -234,6 +241,24 @@ test("anybody may look, only a player may take part", async () => {
     assert.equal(refused.statusCode, 401, `${url} is not open`);
   }
   assert.deepEqual(fakeGame.calls.filter(([name]) => name !== "readMarket"), []);
+});
+
+test("public market search parameters are bounded and passed through", async () => {
+  fakeGame.calls.length = 0;
+  const response = await browser().get(
+    "/api/market?q=quake&type=AXE_TYPE&rarity=3&hero=101&maxPrice=900&sort=price_asc&limit=999&offset=-4"
+  );
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(fakeGame.calls, [["readMarket", {
+    q: "quake",
+    type: "AXE_TYPE",
+    rarity: 3,
+    hero: 101,
+    maxPrice: 900,
+    sort: "price_asc",
+    limit: 100,
+    offset: 0,
+  }]]);
 });
 
 test("a signed-in browser cannot mutate the market without its CSRF token", async () => {

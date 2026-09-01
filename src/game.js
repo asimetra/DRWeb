@@ -104,8 +104,12 @@ export const readStatus = () => call("GET", "/internal/v1/status");
  * these takes its account id from the caller, and the caller takes it from the
  * session rather than from the request.
  */
-export const readMarket = (limit = 50) =>
-  call("GET", `/internal/v1/market?limit=${Number(limit)}`);
+export const readMarket = (options = {}) => {
+  const query = new URLSearchParams(
+    Object.entries(options).filter(([, value]) => value !== undefined && value !== null && value !== "")
+  );
+  return call("GET", `/internal/v1/market?${query}`);
+};
 
 export const readStall = (accountId) =>
   call("GET", `/internal/v1/accounts/${Number(accountId)}/stall`);
