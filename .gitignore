@@ -11,20 +11,14 @@ node_modules/
 # The picture and the typeface the site reads from web/public/.
 #
 # Ignored because this checkout does not know where they came from, not because
-# the site keeps assets out on principle — it does not. An asset whose origin is
-# known belongs in the repository like any other source, which is why the
-# heroes directory below is an exception rather than a hole in a rule.
+# the site keeps assets out on principle — it does not. Art whose origin is
+# known is imported from web/src/assets/ like any other source.
 #
 # A clone without these two renders on the plain dark ground with a serif
 # fallback: a duller site, not a broken one.
 #
-# The contents rather than the directory: git does not descend into an ignored
-# directory, so `/web/public/` followed by an exception silently ignores the
-# exception too. Checked, not assumed.
-#
 # See README, "The picture and the face".
-/web/public/*
-!/web/public/heroes/
+/web/public/
 
 # Editor and agent scratch: local paths, not the application.
 .claude/

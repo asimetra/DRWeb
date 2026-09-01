@@ -283,8 +283,10 @@ right shape works — a dark, low-contrast picture and a letters-only display fa
 — and there are freely licensed ones that do both well. Without them the site
 renders on the plain dark ground with a serif fallback: duller, not broken.
 
-Assets whose origin *is* known can live in the repository like any other source.
-`web/public/heroes/` is tracked for exactly that.
+Art whose origin *is* known lives in the repository like any other source: the
+hero portraits are in `web/src/assets/heroes/` and are imported, so the build
+fingerprints them and replacing one actually reaches a browser that cached the
+last.
 
 If you are darkening a picture of your own, or subsetting a face you have the
 right to use, this is the shape of it:

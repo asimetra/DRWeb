@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { api, ApiError } from "../api.js";
 import { useViewer } from "../viewer.jsx";
+import { portraitFor } from "../heroes.js";
 
 /* ------------------------------------------------------------------ box - */
 
@@ -228,26 +229,29 @@ const CharacterBox = () => {
 };
 
 /**
- * The client's avatar icons, served by the game server rather than bundled
- * here — the same route and the same reasoning as the background art.
- */
-export const GAME_ICONS = "/content/Resources/Art2D/Icons/Avatars/";
-
-/**
  * A hero's picture, with its initials behind it.
  *
- * The frame is drawn either way, so an icon the game server is not serving
- * leaves a gap in the row rather than a hole in the layout.
+ * The site's own portraits, from the bundle. They used to be fetched from the
+ * game server's `/content/` route, which coupled the site's decoration to the
+ * game server being up and made a website ask a game server for pictures — and
+ * the reason for it was never performance, it was keeping art out of this
+ * repository. These are ours, so the reason is gone.
+ *
+ * The frame is drawn either way, so a hero with no portrait leaves initials
+ * rather than a hole in the layout.
  */
-export const Portrait = ({ hero, mine = false }) => (
-  <span
-    className={mine ? "portrait portrait--me" : "portrait"}
-    title={hero?.name}
-    style={hero?.icon ? { backgroundImage: `url(${GAME_ICONS}${hero.icon}.png)` } : undefined}
-  >
-    {hero ? hero.name.split(" ").map((word) => word[0]).join("") : ""}
-  </span>
-);
+export const Portrait = ({ hero, mine = false }) => {
+  const portrait = portraitFor(hero);
+  return (
+    <span
+      className={mine ? "portrait portrait--me" : "portrait"}
+      title={hero?.name}
+      style={portrait ? { backgroundImage: `url(${portrait})` } : undefined}
+    >
+      {portrait || !hero ? "" : hero.name.split(" ").map((word) => word[0]).join("")}
+    </span>
+  );
+};
 
 /*
  * One poll for the whole page.
