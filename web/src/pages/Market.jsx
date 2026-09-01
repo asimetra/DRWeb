@@ -6,11 +6,18 @@ import { useViewer } from "../viewer.jsx";
 import { asText, since, tierOf, typeOf } from "../market-view.js";
 
 /**
- * Where a deployment serves the weapon icons it exported for itself. The game
- * server's own content route: these are the game's art, so unlike the hero
- * portraits they are not in this repository and not in this bundle.
+ * The weapon icons a deployment exported for itself with tools/export-icons.js.
+ *
+ * Served by this site from web/public/, not fetched from the game server. They
+ * are the game's art so they are not in the repository — but they are a web
+ * page's decoration, and asking a game server for it only made the pictures
+ * break whenever that server did.
+ *
+ * Not imported the way the hero portraits are: those are six files that ship
+ * with the build, these are two hundred and twenty-six that may not be there at
+ * all.
  */
-const WEAPON_ICONS = "/content/Resources/Art2D/Icons/Weapons/";
+const WEAPON_ICONS = "/icons/";
 
 const whole = new Intl.NumberFormat("en-GB");
 

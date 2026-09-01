@@ -267,6 +267,28 @@ and documents it in its own `NOTICE.md`; that boundary is that project's, and
 this repository does not claim to keep one of its own. What ships with the site
 is whatever its operator decides ships with it.
 
+## Weapon icons from your own copy
+
+The market draws a weapon's own icon when the deployment has one. This
+repository ships none: `tools/export-icons.js` reads them out of a copy of the
+game you already have, and they stay on your machine.
+
+```
+node tools/export-icons.js --path <the game's Resources directory>
+```
+
+Either build works — the Steam SWF one and the Haxe one carry these files byte
+for byte identical. It needs [ffdec](https://github.com/jindrapetrik/jpexs-decompiler),
+found on PATH or as the `com.jpexs.decompiler.flash` flatpak, and it writes 226
+icons into `web/public/icons/`, which is git-ignored. The seven it reports
+missing are enemy weapons from a file the Steam build does not carry — nothing a
+player can hold.
+
+The game server decides *which* of a weapon's ten looks a listing wears, since
+that is a rule about its tables; this side only serves the file. Without the
+files the market draws its frame and the weapon's type instead: duller, not
+broken.
+
 ## The picture and the face
 
 The site reads two files from `web/public/`:
