@@ -5,6 +5,13 @@ import { Box, Button, Buttons, Notice, Page } from "../components/Chrome.jsx";
 import { useViewer } from "../viewer.jsx";
 import { asText, since, tierOf, typeOf } from "../market-view.js";
 
+/**
+ * Where a deployment serves the weapon icons it exported for itself. The game
+ * server's own content route: these are the game's art, so unlike the hero
+ * portraits they are not in this repository and not in this bundle.
+ */
+const WEAPON_ICONS = "/content/Resources/Art2D/Icons/Weapons/";
+
 const whole = new Intl.NumberFormat("en-GB");
 
 /**
@@ -137,22 +144,34 @@ const Gold = ({ children }) => (
 /**
  * The left of the three, where a trade site puts the item's picture.
  *
- * There is no picture. The client's weapon art lives in SWFs that nothing has
- * extracted, so an <img> here would be a broken one on every row — and a frame
- * with nothing in it is worse than no frame. What it holds instead is the two
- * things the picture would have told you at a glance anyway: what kind of
- * weapon it is, and how rare. The frame wears the rarity, which is the same
- * ladder the rank colours and the title tiers use.
+ * The picture is the weapon's own icon when the deployment has exported one,
+ * and its type and rarity in words when it has not — neither is a placeholder
+ * for the other. Nothing ships an icon: the art belongs to the game, so a
+ * deployment reads it out of a copy of the game with the server's
+ * tools/export-icons.js and serves it from /content/. A site that never runs
+ * that still has a frame worth looking at.
  *
- * If the art is ever extracted this is the one component that changes.
+ * The frame wears the rarity either way, which is the same ladder the rank
+ * colours and the title tiers use.
  */
 const Sigil = ({ listing }) => {
   const tier = tierOf(listing.rarity);
   const type = typeOf(listing.mastertype);
+  /*
+   * The weapon's own icon when the deployment has it. Nothing ships one — see
+   * the server's tools/export-icons.js — so the frame has to stand on its own
+   * either way, and the initials stay underneath as what shows when it cannot
+   * be loaded rather than as a placeholder that gets replaced.
+   */
+  const icon = listing.icon ? `${WEAPON_ICONS}${listing.icon}.png` : null;
   return (
     <div className={`sigil sigil--${tier}`}>
-      <span className="sigil__mark" aria-hidden="true">
-        {(type || "?").slice(0, 2).toUpperCase()}
+      <span
+        className={icon ? "sigil__mark sigil__mark--art" : "sigil__mark"}
+        aria-hidden="true"
+        style={icon ? { backgroundImage: `url(${icon})` } : undefined}
+      >
+        {icon ? "" : (type || "?").slice(0, 2).toUpperCase()}
       </span>
       <span className="sigil__type">{type || "weapon"}</span>
       {/* Not `title--${tier}`. A saturated word in a small box reads as an

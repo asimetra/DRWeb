@@ -986,3 +986,14 @@ code { font-family: var(--mono); color: var(--text-dim); }
 a.name { color: var(--text); }
 a.name:hover { color: var(--link-hot); }
 
+
+/*
+ * The weapon's own icon, where the two initials would be. Sized to the plate
+ * rather than the text, and pixelated because the art is 100px drawn at 34.
+ */
+.sigil__mark--art {
+  width: 34px;
+  height: 34px;
+  background: center / contain no-repeat;
+  image-rendering: pixelated;
+}
