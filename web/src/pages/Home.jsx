@@ -21,7 +21,7 @@ export const Home = () => (
     </Box>
 
     <Box title="Most Experience" more="top 10" flush>
-      <Standings metric="experience" limit={10} />
+      <Standings metric="hero_experience" limit={10} />
     </Box>
 
     <Box>
