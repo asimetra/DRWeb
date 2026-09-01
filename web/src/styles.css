@@ -1,5 +1,5 @@
 /*
- * Two columns, framed boxes, striped tables — over the game's own art.
+ * Two columns, framed boxes, striped tables — over a dark ground.
  *
  * The shape is the one this file already had, and it was right: the left column
  * holds who you are and where you can go, so the main column is never spent on
@@ -8,15 +8,20 @@
  * unlike things read as one site. None of that changed.
  *
  * What changed is the light it happens in. Parchment on cream is a fine old-web
- * look and belongs to no particular game. This is the dungeon's own loading art,
- * greyed and darkened, with the chrome sitting in the same warm dark rather than
- * on top of it — and the only saturated thing on the page is the game's rarity
- * ladder, which a player reads as meaning before they read it as colour.
+ * look and belongs to no particular game. This is a dark, desaturated ground
+ * with the chrome sitting in the same warm dark rather than on top of it. The
+ * rarity ladder keeps its full voice only in the market, where a tier is the
+ * item's own data; everywhere else it is decoration, and decoration wears the
+ * muted medal tones a scoreboard has always worn.
  *
- * Three things come from the game, and being faithful about them costs nothing:
- *   ground.jpg     a dungeon's loading art, desaturated in processing
- *   display.woff2  the client's own headline face
- *   the ladder     TextColor / GlowColor straight out of the Rarity table
+ * Two files are read from web/public/ and are in no repository. What they are
+ * is the operator's to know, and this file does not claim otherwise:
+ *
+ *   ground.jpg     whatever picture the operator puts there, darkened
+ *   display.woff2  a display face the operator supplies
+ *
+ * Only the third thing here comes from the game: the ladder's colours are the
+ * Rarity table's own TextColor, which is data this server already reads.
  */
 
 /*
@@ -72,12 +77,30 @@
   --good-edge: rgba(110, 160, 90, 0.50);
   --good-text: #bcd6a8;
 
-  /* The Rarity table's own colours. COMMON carries none there and none here. */
+  /* The Rarity table's own colours, kept for the market where a tier is the
+     item's own data. Everywhere the ladder is only decoration — ranks, titles —
+     it is worn muted, one floor down; the table's GlowColor left with the
+     ranking ladders that used to borrow it. */
   --r-common: #868c94;
   --r-uncommon: #1cb6d9;
   --r-rare: #ffdd00;
   --r-legendary: #aa00ff;
-  --r-legendary-glow: #660099;
+
+  /*
+   * Where the ladder would shout, these are the tones it whispers in. Rank
+   * numbers and the words that wear a tier are the same hues laid down in
+   * pigment rather than light: dulled, warmed, a step from grey. Nothing here
+   * glows — an old board does not.
+   */
+  --rank-1: #c4a75f; /* old gold */
+  --rank-2: #a8a497; /* pewter */
+  --rank-3: #ad7f4e; /* bronze */
+  --rank-rest: #877a63;
+
+  --tier-legendary: #a98ace;
+  --tier-rare: #d9bd64;
+  --tier-uncommon: #4f9db5;
+  --tier-common: #8d8878;
 
   --display: "Deeds Display", Georgia, serif;
   --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -179,9 +202,12 @@ a:hover { color: var(--link-hot); }
 /* ------------------------------------------------------------------ box - */
 
 /*
- * A box is weather, not a card. No outline boxing it in — a lit top edge and a
- * body that thins downward, so the ground shows through the bottom of it and
- * the foreground sits in the same air as the picture.
+ * A box is weather, not a card. Nothing draws its edges: the panel is a body
+ * of dark that thins downward, so the ground shows through the bottom of it,
+ * held on the page by its own weight and a shallow pool of shadow inside. The
+ * version with drawn edges — even half-drawn — kept pulling the eye to the
+ * lines; without them the content is the only thing on the panel there is to
+ * read.
  */
 .box {
   background: linear-gradient(
@@ -190,8 +216,10 @@ a:hover { color: var(--link-hot); }
     rgba(12, 10, 7, 0.68) 55%,
     rgba(12, 10, 7, 0.52) 100%
   );
-  border-top: 1px solid var(--frame-dark);
-  box-shadow: 0 10px 26px -14px rgba(0, 0, 0, 0.95);
+  border-radius: 6px;
+  box-shadow:
+    0 10px 26px -14px rgba(0, 0, 0, 0.95),
+    inset 0 0 24px rgba(0, 0, 0, 0.30);
   backdrop-filter: blur(2px);
 }
 
@@ -244,20 +272,34 @@ a:hover { color: var(--link-hot); }
  * borders into a 13.5rem column to say four things. A margin wants the lightest
  * rule that still separates — the table stays where there is a table's worth of
  * data to read down.
+ *
+ * The HUD-ness comes from the type, not from anything added: the label sinks
+ * into a small spaced-out caption and the number stands up bright and
+ * tabular against it. Eye lands on the figure, rests on the word.
  */
 .stat {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
   gap: 0.5rem;
-  padding: 0.22rem 0;
-  font-size: 0.83rem;
+  padding: 0.3rem 0;
+  font-size: 0.86rem;
 }
-.stat + .stat { border-top: 1px dotted rgba(190, 160, 105, 0.13); }
-.stat__k { color: var(--text-dim); }
-.stat__v { font-variant-numeric: tabular-nums; font-weight: 600; text-align: right; }
+.stat + .stat { border-top: 1px dotted rgba(190, 160, 105, 0.10); }
+.stat__k {
+  color: var(--text-faint);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+}
+.stat__v {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  text-align: right;
+  color: var(--text);
+}
 
-/** A board in five lines. The rank wears the ladder the full table does. */
+/** A board in five lines. The rank wears the medal tone the full table does. */
 .mini { list-style: none; margin: 0; padding: 0; }
 .mini li {
   display: flex;
@@ -267,16 +309,23 @@ a:hover { color: var(--link-hot); }
   font-size: 0.83rem;
 }
 .mini li + li { border-top: 1px dotted rgba(190, 160, 105, 0.13); }
+/*
+ * The rank is a whisper of where somebody finished, not the reason to look.
+ * The first three wear medal tones — gold, pewter, bronze, all laid down in
+ * muted pigment — and everyone below wears the chrome's own quiet. No glow
+ * anywhere: a number that shines harder than the name it sits beside has the
+ * page backwards.
+ */
 .mini__pos {
   width: 1.1rem;
   text-align: right;
   font-variant-numeric: tabular-nums;
-  font-weight: 700;
-  color: var(--r-common);
+  font-weight: 600;
+  color: var(--rank-rest);
 }
-.mini li:nth-child(1) .mini__pos { color: var(--r-legendary); text-shadow: 0 0 9px var(--r-legendary-glow); }
-.mini li:nth-child(2) .mini__pos { color: var(--r-rare); }
-.mini li:nth-child(3) .mini__pos { color: var(--r-uncommon); }
+.mini li:nth-child(1) .mini__pos { color: var(--rank-1); }
+.mini li:nth-child(2) .mini__pos { color: var(--rank-2); }
+.mini li:nth-child(3) .mini__pos { color: var(--rank-3); }
 /** A long name gives way rather than widening the rail. */
 .mini__nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mini__vl { color: var(--text-dim); font-variant-numeric: tabular-nums; font-size: 0.78rem; }
@@ -332,6 +381,7 @@ a:hover { color: var(--link-hot); }
   color: var(--text);
   background: var(--page-lit);
   border: 1px solid var(--frame);
+  border-radius: 3px;
   padding: 0.2rem 0.35rem;
 }
 
@@ -347,11 +397,14 @@ a:hover { color: var(--link-hot); }
 .pager__count { margin-left: auto; }
 
 /*
- * Ruled on all four sides of every cell. That one thing reads as an older site
- * more than any colour choice does: a grid you read down, rather than a modern
- * list with air in it.
+ * No grid of cell walls. A modern dashboard rules every side of every cell and
+ * the reader sees an admin panel; a board is read down rather than across, so
+ * what it needs is a ruled header, a faint rule under each row, and air. The
+ * columns still line up — tabular figures and fixed paddings do that work —
+ * but the eye meets one rule at a time, which is what makes it feel like a
+ * board and not a spreadsheet.
  */
-/** Six ruled columns will not fold; they scroll inside the panel instead. */
+/** Six columns will not fold; they scroll inside the panel instead. */
 .table-wrap { overflow-x: auto; }
 .table-wrap .table { min-width: 34rem; }
 .table { border-collapse: collapse; width: 100%; font-size: 0.82rem; }
@@ -360,20 +413,22 @@ a:hover { color: var(--link-hot); }
   font-size: 0.64rem;
   text-transform: uppercase;
   letter-spacing: 0.10em;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--gold);
-  padding: 0.3rem 0.55rem;
-  background: linear-gradient(180deg, rgba(168, 143, 95, 0.20), rgba(168, 143, 95, 0.09));
-  border: 1px solid var(--frame-dark);
+  padding: 0.34rem 0.6rem;
+  background: linear-gradient(180deg, rgba(168, 143, 95, 0.14), rgba(168, 143, 95, 0.04));
+  border-bottom: 1px solid var(--frame-dark);
   white-space: nowrap;
 }
 .table td {
-  padding: 0.24rem 0.55rem;
-  border: 1px solid rgba(190, 160, 105, 0.09);
+  padding: 0.3rem 0.6rem;
+  border: 0;
+  border-bottom: 1px dotted rgba(190, 160, 105, 0.12);
   vertical-align: middle;
 }
-.table tbody tr:nth-child(odd) { background: var(--page-alt); }
-.table tbody tr:hover { background: rgba(168, 143, 95, 0.14); }
+.table tbody tr:last-child td { border-bottom: 0; }
+.table tbody tr:nth-child(odd) { background: rgba(168, 143, 95, 0.04); }
+.table tbody tr:hover { background: rgba(168, 143, 95, 0.11); }
 
 .table__num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .table__quiet { color: var(--text-dim); }
@@ -382,25 +437,25 @@ a:hover { color: var(--link-hot); }
 .table__empty { color: var(--text-dim); text-align: center; padding: 1.1rem 0.55rem; }
 
 /*
- * Rank wears the rarity ladder — legendary, rare, uncommon, then common for
- * everyone below. On a page with no other saturation the top three are read
- * before a word is.
+ * Rank wears the medal tones — gold, pewter, bronze, then the chrome's quiet
+ * for everyone below. Muted by intent: the name beside it is the louder thing,
+ * and on a warm dark page a matte number reads older than a glowing one.
  */
 .table__rank {
-  width: 2.8rem;
+  width: 2.4rem;
   font-variant-numeric: tabular-nums;
-  font-weight: 700;
-  color: var(--r-common);
+  font-weight: 600;
+  color: var(--rank-rest);
 }
-.table tbody tr:nth-child(1) .table__rank { color: var(--r-legendary); text-shadow: 0 0 11px var(--r-legendary-glow); }
-.table tbody tr:nth-child(2) .table__rank { color: var(--r-rare); }
-.table tbody tr:nth-child(3) .table__rank { color: var(--r-uncommon); }
+.table tbody tr:nth-child(1) .table__rank { color: var(--rank-1); }
+.table tbody tr:nth-child(2) .table__rank { color: var(--rank-2); }
+.table tbody tr:nth-child(3) .table__rank { color: var(--rank-3); }
 
 /*
- * The rank number wears the ladder; the frame does not.
+ * The top three stand a little out of the row; the frame does not follow.
  *
- * A portrait ringed in purple with a glow behind it is a light rather than a
- * frame, and three of them down a board turn a warm dark page into a strip of
+ * A portrait ringed in gold with a glow behind it would be a light rather than
+ * a frame, and three of them down a board turn a warm dark page into a strip of
  * indicators. The distinction is worth keeping and does not need hue to carry
  * it: the top frame is simply lit a little more than the rest, which is what
  * every other edge on this page already does.
@@ -424,7 +479,8 @@ a:hover { color: var(--link-hot); }
 .who__hero { display: block; font-weight: 600; font-size: 0.84rem; }
 /** In a row the hero is a caption under the name, not a second name. */
 .who__hero--row { font-weight: 400; font-size: 0.72rem; color: var(--text-dim); line-height: 1.2; }
-.who__level { display: block; font-size: 0.75rem; color: var(--text-dim); }
+/** The line under a hero's name now carries what the player has done. */
+.who__trophies { display: block; font-size: 0.75rem; color: var(--text-dim); }
 .portrait {
   width: 26px; height: 26px; flex: none; image-rendering: pixelated;
   background: var(--page-sunk) center / cover no-repeat;
@@ -436,14 +492,16 @@ a:hover { color: var(--link-hot); }
 .portrait--me { width: 34px; height: 34px; font-size: 0.7rem; border-color: var(--frame-lit); }
 
 /*
- * A title wears the tier its trophy count earned, so the ladder reads the same
- * in a table cell as it does on a rank.
+ * A title wears the tier its trophy count earned — in the tier ink, the
+ * ladder's hues laid down muted, so the word reads as meaning without
+ * flashing like a lamp. The raw Rarity colours stay with the market, where
+ * they are the item's own data.
  */
 .title { font-weight: 600; }
-.title--legendary { color: var(--r-legendary); }
-.title--rare { color: var(--r-rare); }
-.title--uncommon { color: var(--r-uncommon); }
-.title--common { color: var(--r-common); }
+.title--legendary { color: var(--tier-legendary); }
+.title--rare { color: var(--tier-rare); }
+.title--uncommon { color: var(--tier-uncommon); }
+.title--common { color: var(--tier-common); }
 
 /*
  * A weapon and what it does, stacked: the name on its line, the modifiers
@@ -479,7 +537,7 @@ a:hover { color: var(--link-hot); }
   border-bottom: 1px solid var(--rule);
 }
 .stock__row:last-child { border-bottom: 0; }
-.stock__row:nth-child(odd) { background: var(--page-alt); }
+.stock__row:nth-child(odd) { background: rgba(168, 143, 95, 0.04); }
 
 /* ------------------------------------------------------------- the sigil - */
 
@@ -494,6 +552,7 @@ a:hover { color: var(--link-hot); }
   gap: 0.2rem;
   padding: 0.45rem 0.3rem;
   border: 1px solid var(--frame);
+  border-radius: 4px;
   background: var(--page-sunk);
   text-align: center;
 }
@@ -537,6 +596,7 @@ a:hover { color: var(--link-hot); }
   align-content: start;
   padding: 0.55rem 0.6rem;
   border: 1px solid var(--frame);
+  border-radius: 4px;
   background: linear-gradient(180deg, rgba(168, 143, 95, 0.09), rgba(0, 0, 0, 0.22));
 }
 .deal__label {
@@ -593,6 +653,7 @@ a:hover { color: var(--link-hot); }
   color: var(--text);
   background: var(--page-lit);
   border: 1px solid var(--frame);
+  border-radius: 3px;
   padding: 0.3rem 0.4rem;
 }
 .market-filter--search .field__input { width: 100%; }
@@ -692,12 +753,19 @@ a:hover { color: var(--link-hot); }
 .item__mod--legendary { color: var(--r-legendary); }
 .item__mod--legendary::before { content: "★ "; opacity: 0.85; }
 
-/** Two-column facts. The same stripes, so a table and a fact list agree. */
+/** Two-column facts, with the caption-and-figure rhythm the rails use. */
 .facts { border-collapse: collapse; width: 100%; font-size: 0.83rem; }
 .facts th,
-.facts td { padding: 0.26rem 0.55rem; border-bottom: 1px dotted var(--rule); }
-.facts th { text-align: left; font-weight: 400; color: var(--text-dim); }
-.facts td { text-align: right; font-variant-numeric: tabular-nums; }
+.facts td { padding: 0.3rem 0.55rem; border-bottom: 1px dotted var(--rule); }
+.facts th {
+  text-align: left;
+  font-weight: 400;
+  color: var(--text-faint);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+}
+.facts td { text-align: right; font-variant-numeric: tabular-nums; color: var(--text); }
 .facts tr:last-child th,
 .facts tr:last-child td { border-bottom: 0; }
 
@@ -728,6 +796,7 @@ a:hover { color: var(--link-hot); }
   color: var(--text);
   background: var(--page-sunk);
   border: 1px solid var(--frame);
+  border-radius: 3px;
   padding: 0.35rem 0.45rem;
   width: 100%;
 }
@@ -741,7 +810,10 @@ a:hover { color: var(--link-hot); }
   font-size: 0.85rem;
   color: var(--text-on-frame);
   background: linear-gradient(180deg, rgba(168, 143, 95, 0.30), rgba(168, 143, 95, 0.14));
+  /* A little give in the corners, the same easing the panels wear — a button
+     with razor corners next to a rounded panel would be two dialects. */
   border: 1px solid var(--frame-dark);
+  border-radius: 4px;
   padding: 0.35rem 0.9rem;
   cursor: pointer;
 }
@@ -756,7 +828,7 @@ a:hover { color: var(--link-hot); }
 
 /* -------------------------------------------------------------- notices - */
 
-.notice { padding: 0.45rem 0.7rem; border: 1px solid var(--frame); margin-bottom: 0.7rem; font-size: 0.85rem; }
+.notice { padding: 0.45rem 0.7rem; border: 1px solid var(--frame); border-radius: 4px; margin-bottom: 0.7rem; font-size: 0.85rem; }
 .notice--bad { background: var(--bad-bg); border-color: var(--bad-edge); color: var(--bad-text); }
 .notice--good { background: var(--good-bg); border-color: var(--good-edge); color: var(--good-text); }
 
@@ -781,6 +853,7 @@ a:hover { color: var(--link-hot); }
   margin-top: 0.25rem;
   padding: 0.65rem;
   border: 1px solid var(--rule);
+  border-radius: 3px;
   background: var(--page-alt);
 }
 .listing-form__preview .item { max-width: 36rem; }
@@ -794,6 +867,7 @@ a:hover { color: var(--link-hot); }
   font-size: 0.82rem;
   background: var(--page-sunk);
   border: 1px solid var(--frame);
+  border-radius: 3px;
   padding: 0.3rem 0.45rem;
   word-break: break-all;
   display: block;
@@ -826,18 +900,24 @@ code { font-family: var(--mono); color: var(--text-dim); }
 .heroes {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 0.7rem;
+  padding: 0.7rem;
 }
 /*
- * A rule above every hero, including the first, and none between columns.
+ * One hero, one card.
  *
- * The obvious version — no rule on the first row, a rule down the middle —
- * needs the stylesheet to know how many columns `auto-fit` produced, and it
- * cannot. Tying that to a width breakpoint got it wrong at 600px, where two
- * still fit and the separators vanished. A rule above each one is right at any
- * count; the negative margin eats the doubling against the panel's title bar.
+ * The roster used to be one surface cut by rules, which read as a single table
+ * of heroes — but a build is a thing somebody made, and it deserves its own
+ * edges. The card speaks the panel's language rather than its own: a body of
+ * dark, sunk a little deeper than the panel it sits in, a pool of shadow
+ * inside, a corner eased — and no drawn frame, because the panels have none.
  */
-.heroes { margin-top: -1px; }
-.hero { padding: 0.7rem 0.8rem; border-top: 1px solid var(--rule); }
+.hero {
+  padding: 0.7rem 0.8rem;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.38), rgba(0, 0, 0, 0.22));
+  border-radius: 6px;
+  box-shadow: inset 0 0 16px rgba(0, 0, 0, 0.26);
+}
 
 .hero__head {
   display: flex;

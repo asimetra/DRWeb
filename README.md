@@ -265,26 +265,33 @@ server to prove it would be testing the other repository.
 GPL-3.0-or-later. See the game server's `NOTICE.md` for the redistribution
 boundary that project keeps; this one holds no game material at all.
 
-## The game's own art
+## The picture and the face
 
 The site reads two files from `web/public/`, and neither is in this repository:
 
 | file | what it is |
 | --- | --- |
-| `ground.jpg` | a dungeon's loading art, desaturated and darkened |
-| `display.woff2` | the client's headline face, subset to letters |
+| `ground.jpg` | a picture to sit behind the page, darkened until type reads on it |
+| `display.woff2` | a display face for headings, subset to the letters used |
 
-They are the game's assets rather than this project's. The server repository
-refuses to carry anything of the kind — `.swf`, its resource tree, even the
-product name — and this repository keeps the same line by ignoring the
-directory. Without them the site renders on the plain dark ground with a serif
-fallback: duller, not broken.
+**This project makes no claim about where either comes from.** They are supplied
+by whoever runs the site, they stay on that machine, and choosing them — and
+being right about their licence — is that person's decision. A repository that
+names an origin it has not verified has written down a guess, and a wrong guess
+about provenance helps nobody.
 
-To produce them from a client you already own, with Pillow and fonttools:
+What this repository does hold is the shape of them: a dark, low-contrast image
+and a letters-only display face. Any picture and any face fitting that
+description will do, and there are freely licensed ones that do it well. Without
+them the site renders on the plain dark ground with a serif fallback — duller,
+not broken.
+
+If you are darkening a picture of your own, or subsetting a face you have the
+right to use, this is the shape of it:
 
 ```py
 from PIL import Image, ImageEnhance
-im = Image.open("<a loading screen>.jpg").convert("L")
+im = Image.open("<your picture>.jpg").convert("L")
 im = ImageEnhance.Contrast(im).enhance(1.15)
 im = ImageEnhance.Brightness(im).enhance(0.42)   # dark enough to read type on
 im.resize((1920, 1072)).save("web/public/ground.jpg", quality=74, optimize=True)
@@ -293,7 +300,7 @@ im.resize((1920, 1072)).save("web/public/ground.jpg", quality=74, optimize=True)
 ```py
 from fontTools.ttLib import TTFont
 from fontTools.subset import Subsetter, Options
-f = TTFont("<the client's display face>.ttf")
+f = TTFont("<your display face>.ttf")
 s = Subsetter(options=Options()); s.populate(text=
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"); s.subset(f)
 f.flavor = "woff2"; f.save("web/public/display.woff2")

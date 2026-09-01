@@ -191,14 +191,28 @@ const CharacterBox = () => {
   }
 
   const hero = player.hero;
+  /*
+   * The heading is the player's own name, and it is the way to their own
+   * profile — the one page that answers "how do I look to everybody else".
+   * Level is not beside the name: a level says nothing to anybody scanning the
+   * rail, while the trophy count is what the player has actually done.
+   */
   return (
-    <Box title={player.name || "Character"} more={hero ? `level ${hero.level}` : null}>
+    <Box
+      title={
+        <Link className="name" to={`/player/${encodeURIComponent(player.name ?? "")}`}>
+          {player.name || "Character"}
+        </Link>
+      }
+    >
       {hero ? (
         <div className="who who--me">
           <Portrait hero={hero} mine />
           <span>
             <span className="who__hero">{hero.name}</span>
-            <span className="who__level">Level {hero.level}</span>
+            <span className="who__trophies">
+              {whole.format(player.trophies ?? 0)} trophies
+            </span>
           </span>
         </div>
       ) : null}
@@ -207,10 +221,6 @@ const CharacterBox = () => {
           <span className={`title title--${player.title.tier}`}>{player.title.name}</span>
         </Stat>
       ) : null}
-      <Stat label="Trophies">
-        {player.trophies ?? 0}
-        <span className="table__quiet"> / {player.trophies_of ?? 12}</span>
-      </Stat>
       <Stat label="Dungeons finished">{whole.format(player.clears ?? 0)}</Stat>
       {player.heroes ? <Stat label="Heroes">{whole.format(player.heroes)}</Stat> : null}
     </Box>
@@ -336,8 +346,10 @@ const sinceStarted = (seconds) => {
 /**
  * A board in five lines, for a margin.
  *
- * The rank wears the rarity ladder the same way the full table does, so a
- * colour means the same thing wherever it turns up on the site.
+ * Every name is the way to that player's page, standing on its own — the rail
+ * is a set of doors, not a teaser for the Hall of Deeds. The rank wears the
+ * medal tone the full table does, so a colour means the same thing wherever it
+ * turns up on the site.
  */
 const MiniBoard = ({ title, more, metric, format }) => {
   const [entries, setEntries] = useState(null);
@@ -368,7 +380,15 @@ const MiniBoard = ({ title, more, metric, format }) => {
         {entries.map((entry) => (
           <li key={entry.account_id}>
             <span className="mini__pos">{entry.rank}</span>
-            <span className="mini__nm">{entry.name || "unnamed"}</span>
+            <span className="mini__nm">
+              {entry.name ? (
+                <Link className="name" to={`/player/${encodeURIComponent(entry.name)}`}>
+                  {entry.name}
+                </Link>
+              ) : (
+                "unnamed"
+              )}
+            </span>
             <span className="mini__vl">{format(entry.value)}</span>
           </li>
         ))}
@@ -450,6 +470,7 @@ const NotPlayingYet = () => {
  */
 export const Page = ({ where, children }) => {
   const status = useStatus();
+  const { viewer, ready } = useViewer();
 
   return (
     <>
@@ -460,9 +481,20 @@ export const Page = ({ where, children }) => {
 
       <div className="layout">
         <div className="column">
-          <LogInBox />
-          <CharacterBox />
-          <NotPlayingYet />
+          {/*
+            Nothing here renders before the session is known. Drawing the login
+            form first and taking it away when `/api/me` answers is how a
+            signed-in visitor watched the site greet somebody else and then
+            change its mind — the first paint is a lie, and the fix is to not
+            paint until there is something true to paint.
+          */}
+          {ready && viewer ? (
+            <>
+              <CharacterBox />
+              <NotPlayingYet />
+            </>
+          ) : null}
+          {ready && !viewer ? <LogInBox /> : null}
           <Menu />
           <ServerBox />
         </div>
@@ -476,8 +508,8 @@ export const Page = ({ where, children }) => {
         <div className="column column--aside">
           <MiniBoard
             title="Most Experience"
-            more="lifetime"
-            metric="experience"
+            more="best hero"
+            metric="hero_experience"
             format={asCount}
           />
           <MiniBoard
@@ -495,8 +527,9 @@ export const Page = ({ where, children }) => {
         which is a thing worth saying on the page rather than only in a comment.
       */}
       <footer className="site-foot">
-        Rank colours are the game's rarity ladder. Background art, headline face
-        and portraits are the game's own, served at <code>/content/…</code>.
+        Rarity words in the market keep the game's own colours. Background art,
+        headline face and portraits are the game's own, served at{" "}
+        <code>/content/…</code>.
       </footer>
     </>
   );

@@ -149,10 +149,7 @@ export const Player = () => {
       </div>
 
       <Box title="Deeds">
-        <Stat label="Trophies">
-          {player.trophies ?? 0}
-          <span className="table__quiet"> / {player.trophies_of ?? 12}</span>
-        </Stat>
+        <Stat label="Trophies">{whole.format(player.trophies ?? 0)}</Stat>
         <Stat label="Dungeons finished">{whole.format(player.clears ?? 0)}</Stat>
         <Stat label="Experience earned">{whole.format(player.experience_total ?? 0)}</Stat>
         <Stat label="Heroes">{player.heroes?.length ?? 0}</Stat>
