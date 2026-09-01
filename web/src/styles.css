@@ -396,10 +396,18 @@ a:hover { color: var(--link-hot); }
 .table tbody tr:nth-child(2) .table__rank { color: var(--r-rare); }
 .table tbody tr:nth-child(3) .table__rank { color: var(--r-uncommon); }
 
-/* The frame wears it too, so the top of a board reads before a word does. */
-.table tbody tr:nth-child(1) .portrait { border-color: var(--r-legendary); box-shadow: 0 0 9px var(--r-legendary-glow); }
-.table tbody tr:nth-child(2) .portrait { border-color: var(--r-rare); }
-.table tbody tr:nth-child(3) .portrait { border-color: var(--r-uncommon); }
+/*
+ * The rank number wears the ladder; the frame does not.
+ *
+ * A portrait ringed in purple with a glow behind it is a light rather than a
+ * frame, and three of them down a board turn a warm dark page into a strip of
+ * indicators. The distinction is worth keeping and does not need hue to carry
+ * it: the top frame is simply lit a little more than the rest, which is what
+ * every other edge on this page already does.
+ */
+.table tbody tr:nth-child(1) .portrait { border-color: var(--frame-lit); }
+.table tbody tr:nth-child(2) .portrait,
+.table tbody tr:nth-child(3) .portrait { border-color: var(--frame-dark); }
 
 /*
  * A portrait beside a name. The same thing in a board row and in the character
@@ -424,8 +432,8 @@ a:hover { color: var(--link-hot); }
   display: grid; place-items: center;
   font-size: 0.6rem; color: var(--text-faint);
 }
-/** Your own is larger, and wears a colour so you find yourself at a glance. */
-.portrait--me { width: 34px; height: 34px; font-size: 0.7rem; border-color: var(--r-uncommon); }
+/** Your own is larger. Size finds you on a page; a coloured ring is a light. */
+.portrait--me { width: 34px; height: 34px; font-size: 0.7rem; border-color: var(--frame-lit); }
 
 /*
  * A title wears the tier its trophy count earned, so the ladder reads the same
@@ -509,13 +517,12 @@ a:hover { color: var(--link-hot); }
   font-weight: 600;
   color: var(--text-dim);
 }
-/* The ladder again, on the frame this time. */
-.sigil--uncommon { border-color: color-mix(in srgb, var(--r-uncommon) 55%, transparent); }
-.sigil--rare { border-color: color-mix(in srgb, var(--r-rare) 45%, transparent); }
-.sigil--legendary {
-  border-color: color-mix(in srgb, var(--r-legendary) 60%, transparent);
-  box-shadow: 0 0 10px -2px var(--r-legendary-glow);
-}
+/*
+ * The tier is written under the sigil in words. Ringing the frame in the same
+ * colour says it twice, and the second time in the one register this page
+ * keeps for meaning — so the frame stays the frame.
+ */
+.sigil--legendary { border-color: var(--frame-lit); }
 
 /* -------------------------------------------------------------- the deal - */
 
