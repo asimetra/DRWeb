@@ -31,7 +31,7 @@ const since = (when) => {
   return `${Math.floor(days / 7)} weeks ago`;
 };
 
-const HEADING = { speedrun: "Time", clears: "Runs", hero_experience: "Experience" };
+const HEADING = { speedrun: "Time", clears: "Runs", hero_experience: "Experience", trophies: "Trophies" };
 
 /**
  * A board, as the table itself: ruled on all four sides of every cell, header
@@ -142,6 +142,7 @@ export const Standings = ({ metric, limit = 20, scope = {}, onCount }) => {
 };
 
 const BOARDS = [
+  { metric: "trophies", tab: "Trophies", where: "bosses beaten · top is twelve" },
   { metric: "clears", tab: "Dungeons finished", where: "lifetime" },
   {
     metric: "hero_experience",
