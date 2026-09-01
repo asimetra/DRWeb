@@ -862,6 +862,21 @@ code { font-family: var(--mono); color: var(--text-dim); }
 .hero__stats dt { color: var(--text-faint); }
 .hero__stats dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
 
+/*
+ * How a hero's training points were placed — the four slots the game's own
+ * training screen shows, under the same names its locale gives them. It reads
+ * as a second list of facts under the computed vector, because a build is a
+ * choice and the vector is its outcome; the two answer different questions.
+ */
+.hero__training { margin-top: 0.5rem; }
+.hero__training-label {
+  margin: 0 0 0.15rem;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-faint);
+}
+
 /* A name is a link everywhere it appears, and reads as one without shouting. */
 a.name { color: var(--text); }
 a.name:hover { color: var(--link-hot); }

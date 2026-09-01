@@ -26,8 +26,9 @@ const SHOWN = [
  * One hero, as far as its owner has taken it.
  *
  * Every number here is the game server's — the level from the Leveling table,
- * the stats from the same vector the dungeon uses. Working any of it out again
- * on this side would be a second opinion to keep in step.
+ * the stats from the same vector the dungeon uses, and the training build the
+ * four slots carry with the names the client's own locale gives them. Working
+ * any of it out again on this side would be a second opinion to keep in step.
  */
 const Hero = ({ hero }) => (
   <div className="hero">
@@ -58,6 +59,27 @@ const Hero = ({ hero }) => (
         ) : null
       )}
     </dl>
+
+    {hero.spent?.slots?.length ? (
+      <div className="hero__training">
+        <p className="hero__training-label">
+          Training
+          <span className="table__quiet">
+            {" "}
+            · {whole.format(hero.spent.placed ?? 0)} of {whole.format(hero.spent.earned ?? 0)} points
+            {hero.spent.cap ? ` · ${hero.spent.cap} a slot` : ""}
+          </span>
+        </p>
+        <dl className="hero__stats">
+          {hero.spent.slots.map((slot) => (
+            <span key={slot.slot} style={{ display: "contents" }}>
+              <dt>{slot.name ?? slot.stat ?? `Slot ${slot.slot}`}</dt>
+              <dd>{whole.format(slot.points)}</dd>
+            </span>
+          ))}
+        </dl>
+      </div>
+    ) : null}
   </div>
 );
 
