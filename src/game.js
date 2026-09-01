@@ -111,6 +111,14 @@ export const readMarket = (options = {}) => {
   return call("GET", `/internal/v1/market?${query}`);
 };
 
+/**
+ * Somebody's profile, by name. Names are unique and the account id is the
+ * number the client authenticates with, so this is the one address a profile
+ * can be linked by without handing out a credential.
+ */
+export const readProfile = (name) =>
+  call("GET", `/internal/v1/players/${encodeURIComponent(name)}`);
+
 export const readStall = (accountId) =>
   call("GET", `/internal/v1/accounts/${Number(accountId)}/stall`);
 

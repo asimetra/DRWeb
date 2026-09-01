@@ -88,6 +88,12 @@ const fakeGame = {
       facets: { types: [], rarities: [], heroes: [] },
     };
   },
+  profiles: {},
+  async readProfile(name) {
+    if (fakeGame.refuseWith) throw fakeGame.refuseWith;
+    fakeGame.calls.push(["readProfile", name]);
+    return fakeGame.profiles[name] ?? { name, heroes: [], sales: [] };
+  },
   async readStall(accountId) {
     fakeGame.calls.push(["readStall", accountId]);
     return { account_id: accountId, listed: [], sold: [], owed: 0 };
@@ -136,6 +142,7 @@ beforeEach(async () => {
   fakeGame.calls.length = 0;
   fakeGame.refuseWith = null;
   fakeGame.names.clear();
+  fakeGame.profiles = {};
   fakeGame.next = 1_000_000_001;
   fakeMailer.sent.length = 0;
   await storage.close();
@@ -315,4 +322,34 @@ test("the inventory offered is what is unequipped", async () => {
   const bag = (await me.visitor.get("/api/inventory")).json();
   assert.deepEqual(bag.items.map((item) => item.id), [501], "a worn weapon is not on offer");
   assert.equal(bag.gold, 1000);
+});
+
+/* --------------------------------------------------------------- profile - */
+
+/**
+ * Readable signed out, like the market and the boards. This is the page a link
+ * in a chat points at, and one that demanded an account first would not be
+ * worth linking.
+ */
+test("a profile is readable by anybody, by name", async () => {
+  fakeGame.profiles = { Sable: { name: "Sable", trophies: 4, heroes: [], sales: [] } };
+  const looking = await browser().get("/api/players/Sable");
+
+  assert.equal(looking.statusCode, 200);
+  assert.equal(looking.json().name, "Sable");
+  assert.deepEqual(fakeGame.calls.at(-1), ["readProfile", "Sable"]);
+});
+
+test("a name that is nobody is a 404 rather than an error", async () => {
+  fakeGame.refuseWith = new GameServerError(404, "no such player");
+  assert.equal((await browser().get("/api/players/Nobody")).statusCode, 404);
+});
+
+/** A name with a space or a Turkish letter survives the round trip. */
+test("a profile name is passed through as it was typed", async () => {
+  fakeGame.profiles = { "Iron Şafak": { name: "Iron Şafak", heroes: [], sales: [] } };
+  const looking = await browser().get(`/api/players/${encodeURIComponent("Iron Şafak")}`);
+
+  assert.equal(looking.statusCode, 200);
+  assert.deepEqual(fakeGame.calls.at(-1), ["readProfile", "Iron Şafak"]);
 });

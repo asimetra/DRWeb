@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { api, ApiError } from "../api.js";
 import { Box, Notice, Page, Portrait } from "../components/Chrome.jsx";
 
@@ -106,7 +106,13 @@ export const Standings = ({ metric, limit = 20, scope = {}, onCount }) => {
                 <span className="who">
                   <Portrait hero={entry.hero} />
                   <span>
-                    <span className="name">{entry.name || "unnamed"}</span>
+                    {entry.name ? (
+                      <Link className="name" to={`/player/${encodeURIComponent(entry.name)}`}>
+                        {entry.name}
+                      </Link>
+                    ) : (
+                      <span className="name">unnamed</span>
+                    )}
                     {entry.hero ? (
                       <span className="who__hero who__hero--row">{entry.hero.name}</span>
                     ) : null}

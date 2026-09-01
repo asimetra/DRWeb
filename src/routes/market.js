@@ -58,6 +58,19 @@ export const marketRoutes = async (app) => {
   );
 
   /**
+   * Somebody's profile. Readable signed out, like the market and the boards:
+   * this is the page a link in a chat points at, and one that demanded an
+   * account first would not be worth linking.
+   */
+  app.get("/api/players/:name", async (request, reply) => {
+    try {
+      return await app.game.readProfile(request.params.name);
+    } catch (problem) {
+      return relay(reply, problem);
+    }
+  });
+
+  /**
    * Everything up for sale. Readable signed out: a market nobody can look at
    * before joining is a market nobody joins for.
    */

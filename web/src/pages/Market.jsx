@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { api, ApiError } from "../api.js";
 import { Box, Button, Buttons, Notice, Page } from "../components/Chrome.jsx";
 import { useViewer } from "../viewer.jsx";
@@ -195,7 +196,16 @@ const Deal = ({ listing, mine, canBuy, onBuy }) => {
       </span>
 
       <span className="deal__seller">
-        {mine ? <em>your listing</em> : listing.seller_name}
+        {/* A name is a way in. Somebody deciding whether to spend on a weapon
+            wants to know who is selling it, and that question arrives in the
+            middle of another one — so it is answered without leaving. */}
+        {mine ? (
+          <em>your listing</em>
+        ) : (
+          <Link to={`/player/${encodeURIComponent(listing.seller_name)}`}>
+            {listing.seller_name}
+          </Link>
+        )}
         {listed ? <span className="deal__when"> · {listed}</span> : null}
       </span>
 

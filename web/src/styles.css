@@ -808,3 +808,54 @@ code { font-family: var(--mono); color: var(--text-dim); }
 @media (prefers-reduced-motion: no-preference) {
   .table tbody tr, .menu a, .button, a { transition: color 110ms ease, background 110ms ease; }
 }
+
+/* -------------------------------------------------------------- profile - */
+
+/*
+ * The roster, side by side. Two heroes fit on a desktop middle column and one
+ * on a phone — a hero is compared against another hero, so they sit next to
+ * each other rather than down a scroll.
+ */
+.heroes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+}
+/*
+ * A rule above every hero, including the first, and none between columns.
+ *
+ * The obvious version — no rule on the first row, a rule down the middle —
+ * needs the stylesheet to know how many columns `auto-fit` produced, and it
+ * cannot. Tying that to a width breakpoint got it wrong at 600px, where two
+ * still fit and the separators vanished. A rule above each one is right at any
+ * count; the negative margin eats the doubling against the panel's title bar.
+ */
+.heroes { margin-top: -1px; }
+.hero { padding: 0.7rem 0.8rem; border-top: 1px solid var(--rule); }
+
+.hero__head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-bottom: 0.45rem;
+  margin-bottom: 0.4rem;
+  border-bottom: 1px solid var(--rule);
+}
+.hero__name { display: block; font-weight: 600; }
+/* Quiet: which hero somebody is on is a fact, not a badge. */
+.hero__active { font-weight: 400; font-size: 0.74rem; color: var(--text-faint); }
+.hero__level { display: block; font-size: 0.75rem; color: var(--text-dim); }
+
+.hero__stats {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.1rem 0.8rem;
+  margin: 0;
+  font-size: 0.8rem;
+}
+.hero__stats dt { color: var(--text-faint); }
+.hero__stats dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+
+/* A name is a link everywhere it appears, and reads as one without shouting. */
+a.name { color: var(--text); }
+a.name:hover { color: var(--link-hot); }
+

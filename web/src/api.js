@@ -97,6 +97,7 @@ export const api = {
    * from the session — nothing here sends an account id, because an account id
    * a browser could choose would be a way to sell somebody else's weapons.
    */
+  profile: (name) => call("GET", `/api/players/${encodeURIComponent(name)}`),
   market: (options = {}) => {
     const query = new URLSearchParams(
       Object.entries(options).filter(([, value]) => value !== undefined && value !== null && value !== "")
